@@ -377,6 +377,19 @@ function showToast(msg, isError=false, duration=3000) {
 // ════════════════════════════════════════════
 // APP STATE
 // ════════════════════════════════════════════
+// Load persisted call counts from localStorage
+function loadCounts() {
+  try { return JSON.parse(localStorage.getItem('propiq_counts')||'{}'); } catch { return {}; }
+}
+function saveCounts() {
+  try { localStorage.setItem('propiq_counts', JSON.stringify(S.calls)); } catch {}
+}
+function trackCall(api) {
+  if (!S.calls[api]) S.calls[api] = 0;
+  S.calls[api]++;
+  saveCounts();
+}
+
 const S = {
   tab:      'discover',
   strategy: 'Buy & Hold',
@@ -389,6 +402,7 @@ const S = {
   redfinFile: null,
   health:   {},
   testing:  {},
+  calls:    loadCounts(),  // persisted API call counts
 };
 
 // ════════════════════════════════════════════
@@ -468,6 +482,7 @@ function scoreMarket(d, strategy) {
 const WORKER_URL = 'https://propiq-worker.rharter1982.workers.dev';
 
 async function fetchCensus(zip) {
+  trackCall('census');
   const vars = [
     'B19013_001E','B25064_001E','B25077_001E','B01003_001E',
     'B25003_001E','B25003_002E','B25003_003E','B25002_003E','NAME'
@@ -495,6 +510,7 @@ async function fetchCensus(zip) {
 
 async function fetchFRED(seriesId, limit=6) {
   // Routed through Worker — no CORS issues
+  trackCall('fred');
   const res = await fetch(WORKER_URL+'/fred?series='+seriesId+'&limit='+limit);
   if (!res.ok) throw new Error('FRED worker '+res.status);
   const data = await res.json();
@@ -507,6 +523,7 @@ async function fetchFRED(seriesId, limit=6) {
 
 async function fetchRentcast(zip) {
   // Routed through Worker — auth header added server-side
+  trackCall('rentcast');
   const res = await fetch(WORKER_URL+'/rentcast?zip='+zip);
   if (!res.ok) throw new Error('RentCast worker '+res.status);
   const d = await res.json();
@@ -545,6 +562,7 @@ async function fetchLiveData(zip) {
 // ════════════════════════════════════════════
 async function runAIDiscovery(strategy, onToken) {
   // Called through Cloudflare Worker — no CORS issues from GitHub Pages
+  trackCall('discover');
   onToken('Searching live market data via AI...');
   const res = await fetch(
     WORKER_URL + '/discover?strategy=' + encodeURIComponent(strategy)
@@ -691,7 +709,13 @@ async function runDiscover(){
     showDiscoverResults(data,true);
     showToast('&#10003; Found ' + (data.zips?.length||0) + ' markets for ' + S.strategy);
   }catch(e){
-    err.textContent='Error: '+e.message; err.style.display='block';
+    let msg = e.message;
+    if(msg.includes('Failed to fetch')||msg.includes('NetworkError')||msg.includes('Load failed')){
+      msg = 'Worker unreachable. Make sure: (1) propiq-worker.js is deployed to Cloudflare, (2) ANTHROPIC_KEY secret is set in Worker Settings > Variables & Secrets.';
+    }
+    err.innerHTML = '<strong>Error:</strong> ' + esc(msg);
+    err.style.display = 'block';
+    showToast('Discovery failed', true, 5000);
   }
   btn.className='discover-btn'; btn.textContent='RESCAN MARKETS';
 }
@@ -1019,7 +1043,7 @@ async function fetchRedfin(id,file,label){
     const rows = json.rows || [];
     if(rows.length===0) throw new Error('No rows returned');
     S.redfinData=rows; S.redfinFile=label;
-    showToast('&#10003; Redfin data loaded — ' + rows.length + ' rows');
+    showToast('\u2713 Redfin: ' + rows.length + ' rows loaded successfully', false, 4000);
     setMsg(`✓ ${rows.length} rows loaded`,'#22d3a0');
     if(btn){btn.textContent='✓ LOADED';btn.style.background='#0a2a18';btn.style.color='#22d3a0';btn.style.border='1px solid #1a5030';}
     updateTabLabels();
@@ -1105,8 +1129,42 @@ function renderAPI(){
       <div class="guide-limit">${r.limit}</div>
     </div>`).join('');
 
+  // Build call counter display
+  const LIMITS = {
+    rentcast: {label:'RentCast', limit:50, color:'#fbbf24'},
+    fred:     {label:'FRED',     limit:null, color:'#38bdf8'},
+    census:   {label:'Census',  limit:null, color:'#22d3a0'},
+    discover: {label:'AI Discovery', limit:null, color:'#a78bfa'},
+  };
+  const counterHTML = Object.entries(LIMITS).map(([key,cfg]) => {
+    const count = S.calls[key] || 0;
+    const pct   = cfg.limit ? Math.min(100, (count/cfg.limit)*100) : 0;
+    const warn  = cfg.limit && count >= cfg.limit * 0.8;
+    const barColor = warn ? '#f87171' : cfg.color;
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:#4a6080">${cfg.label}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:${barColor}">
+          ${count}${cfg.limit ? ' / '+cfg.limit : ' calls'}
+          ${cfg.limit ? (warn?'  ⚠ near limit':'') : '  (unlimited)'}
+        </span>
+      </div>
+      ${cfg.limit ? `<div style="height:4px;background:#0d1a28;border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width .6s ease"></div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
   return`
     <div style="max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="section-label" style="margin-bottom:14px">API CALL COUNTER — THIS SESSION</div>
+        ${counterHTML}
+        <button onclick="if(confirm('Reset all call counts?')){S.calls={};saveCounts();renderPage();}"
+          style="margin-top:4px;background:#090f1e;border:1px solid #1a2a40;color:#2a4060;font-family:'DM Mono',monospace;font-size:10px;padding:5px 12px;border-radius:6px;cursor:pointer">
+          RESET COUNTS
+        </button>
+      </div>
       <div class="card">
         <div class="section-label">API HEALTH STATUS</div>
         <p style="font-size:12px;color:#3a6080;margin-bottom:14px">All 3 keys pre-loaded. Click to verify live connections.</p>
@@ -1120,6 +1178,7 @@ function renderAPI(){
         <div class="section-label">API KEY CONFIGURATION</div>
         ${keyCards}
         <p style="font-family:'DM Mono',monospace;font-size:10px;color:#1a3050;margin-top:10px;line-height:1.8">&#9888; Keys live in memory only — refresh clears them.</p>
+      </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="section-label" style="padding:16px 18px 8px">DATA SOURCE GUIDE</div>
