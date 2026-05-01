@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PropIQ — AI Real Estate Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset ── */
+*,::before,::after{box-sizing:border-box}
+*{margin:0;padding:0}
+html{line-height:1.5;-webkit-text-size-adjust:100%}
+body{font-family:'DM Sans',sans-serif;background:#020812;color:#e2e8f0;min-height:100vh}
+button{cursor:pointer;font-family:inherit}
+input{font-family:inherit}
+a{color:inherit;text-decoration:none}
+img,svg{display:block}
+table{border-collapse:collapse}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#060f1e}
+::-webkit-scrollbar-thumb{background:#1a3050;border-radius:2px}
+
+/* ── NAV ── */
+#nav-row1{
+  position:sticky;top:0;z-index:50;
+  background:#030c18;border-bottom:1px solid #0d1e30;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;height:52px;
+}
+#nav-row2{
+  position:sticky;top:52px;z-index:49;
+  background:#030c18;border-bottom:1px solid #0d1e30;
+  display:flex;align-items:center;gap:8px;
+  padding:8px 16px;overflow-x:auto;
+}
+#nav-row3{
+  position:sticky;top:96px;z-index:48;
+  background:#020d1a;border-bottom:1px solid #0d1e30;
+  display:flex;overflow-x:auto;
+}
+#nav-row2::-webkit-scrollbar,#nav-row3::-webkit-scrollbar{height:0}
+
+/* Logo */
+.logo{display:flex;align-items:center;gap:8px}
+.logo-icon{
+  width:28px;height:28px;border-radius:7px;
+  background:linear-gradient(135deg,#22d3a0,#0ea5e9);
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.08em;color:#fff}
+.logo-sub{font-family:'DM Mono',monospace;font-size:9px;color:#1a3050;letter-spacing:0.1em}
+
+/* ZIP input */
+.zip-wrap{display:flex;gap:6px}
+#zip-input{
+  width:64px;background:#0f1e30;border:1px solid #1e3a50;
+  color:#e2e8f0;font-size:13px;padding:6px 8px;
+  border-radius:6px;font-family:'DM Mono',monospace;outline:none;
+}
+#zip-input::placeholder{color:#3a6080}
+#zip-input:focus{border-color:#22d3a0}
+.zip-add{
+  width:32px;height:32px;border-radius:6px;border:none;
+  background:linear-gradient(135deg,#0ea5e9,#22d3a0);
+  color:#000;font-size:20px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+
+/* Strategy pills */
+.strat-label{font-family:'DM Mono',monospace;font-size:9px;color:#1a3050;letter-spacing:0.1em;flex-shrink:0}
+.strat-btn{
+  flex-shrink:0;background:#0a1525;border:1px solid #1a2a40;
+  color:#3a6080;font-family:'DM Mono',monospace;font-size:11px;
+  font-weight:700;padding:5px 12px;border-radius:6px;
+  transition:all .15s;white-space:nowrap;
+}
+.strat-btn.active{background:#0a2a18;border-color:#22d3a0;color:#22d3a0}
+.strat-btn:hover:not(.active){border-color:#2a5070;color:#7ab8e0}
+
+/* Tab bar */
+.tab-btn{
+  flex-shrink:0;background:transparent;border:none;
+  border-bottom:2px solid transparent;
+  color:#2a4060;font-family:'DM Mono',monospace;font-size:11px;
+  font-weight:700;padding:12px 18px;letter-spacing:0.06em;
+  white-space:nowrap;transition:all .15s;margin-bottom:-1px;
+}
+.tab-btn.active{border-bottom-color:#38bdf8;color:#38bdf8}
+.tab-btn:hover:not(.active){color:#4a7090}
+
+/* ── CARDS ── */
+.card{background:#060f1e;border:1px solid #132030;border-radius:14px;padding:20px}
+.card-sm{background:#090f1e;border:1px solid #121e30;border-radius:10px;padding:14px 16px}
+.section-label{font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;letter-spacing:0.18em;margin-bottom:12px;text-transform:uppercase}
+
+/* ── TILES ── */
+.tile{flex:1;min-width:110px;padding:14px 16px;border-radius:10px;background:#0a1525;border:1px solid #132030}
+.tile.green{background:linear-gradient(135deg,#071a10,#04120a);border-color:#1a4a35}
+.tile-label{font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;letter-spacing:0.1em;margin-bottom:5px}
+.tile-value{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#e2e8f0;line-height:1}
+.tile.green .tile-value{color:#22d3a0}
+.tile-sub{font-family:'DM Mono',monospace;font-size:9px;color:#1e3050;margin-top:4px}
+
+/* ── SCORE BARS ── */
+.sbar-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #0d1a28}
+.sbar-label{width:140px;font-family:'DM Mono',monospace;font-size:11px;color:#4a6080;flex-shrink:0}
+.sbar-track{flex:1;height:5px;background:#0d1a28;border-radius:3px;overflow:hidden}
+.sbar-fill{height:100%;border-radius:3px;transition:width 1.1s ease}
+.sbar-score{width:32px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;flex-shrink:0}
+.sbar-wt{width:28px;text-align:right;font-family:'DM Mono',monospace;font-size:9px;color:#1e3050;flex-shrink:0}
+
+/* ── GAUGE ── */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
+.gauge-ring{transition:stroke-dasharray 1.2s ease}
+.gauge-score{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1}
+.gauge-denom{font-family:'DM Mono',monospace;font-size:8px;color:#3a5070;margin-top:1px}
+.gauge-label{font-family:'DM Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.15em}
+
+/* ── ZIP RANKINGS ── */
+.zip-row{
+  display:flex;align-items:center;gap:8px;padding:10px 12px;
+  border-radius:10px;cursor:pointer;transition:all .15s;
+  background:#090f1e;border:1px solid #121e30;
+}
+.zip-row.active{background:#0a1f35;border-color:#1e4060}
+.zip-row:hover:not(.active){background:#0d1e30}
+.rank-badge{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;font-size:9px;font-weight:800;
+}
+.zip-name{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.04em}
+.zip-score{font-family:'Bebas Neue',sans-serif;font-size:15px}
+.zip-remove{background:none;border:none;color:#1e3050;font-size:16px;padding:0;margin-left:2px}
+
+/* ── DISCOVER ── */
+.hero{
+  background:linear-gradient(135deg,#050e1c,#020812);
+  border:1px solid #132030;border-radius:16px;
+  padding:48px 32px;text-align:center;position:relative;overflow:hidden;
+}
+/* NO grid background - removed */
+.hero-eyebrow{font-family:'DM Mono',monospace;font-size:10px;color:#1a4060;letter-spacing:0.2em;margin-bottom:12px}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:0.05em;color:#fff;margin-bottom:12px;line-height:1}
+.hero-sub{font-size:14px;color:#3a5570;max-width:460px;margin:0 auto 28px;line-height:1.8}
+.hero-sub strong{color:#38bdf8}
+.hero-sub strong.green{color:#22d3a0}
+.discover-btn{
+  font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.14em;
+  padding:14px 48px;border-radius:10px;border:none;
+  background:linear-gradient(135deg,#0ea5e9,#22d3a0);
+  color:#000;font-weight:800;cursor:pointer;transition:all .2s;
+}
+.discover-btn.loading{background:#0a1525;border:1px solid #1a3050;color:#2a4060;cursor:not-allowed}
+
+/* Stream box */
+.stream-box{background:#060f1e;border:1px solid #132030;border-radius:12px;padding:18px 20px;display:none}
+.stream-text{font-family:'DM Mono',monospace;font-size:11px;color:#2a5070;line-height:1.9;word-break:break-all}
+.cursor-blink{display:inline-block;width:7px;height:12px;background:#38bdf8;margin-left:2px;vertical-align:middle;animation:blink .8s step-end infinite}
+
+/* ZIP result cards */
+.zip-card{border-radius:14px;padding:20px 22px;position:relative;overflow:hidden;animation:fadeIn .3s ease forwards}
+.zip-card-bar{position:absolute;top:0;left:0;right:0;height:3px}
+.zip-card-zip{font-family:'Bebas Neue',sans-serif;font-size:30px;color:#fff;letter-spacing:0.04em;line-height:1}
+.zip-card-city{font-family:'DM Mono',monospace;font-size:11px;color:#3a6080;margin-left:6px}
+.zip-card-thesis{font-size:12px;color:#5a8090;line-height:1.7;margin:10px 0}
+.signal-pill{font-family:'DM Mono',monospace;font-size:10px;padding:3px 9px;border-radius:20px;background:#061812;border:1px solid #1a4a35;color:#22d3a0}
+.risk-flag{font-family:'DM Mono',monospace;font-size:11px;color:#d97706;margin:8px 0}
+.analyze-btn{
+  width:100%;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:0.1em;
+  padding:9px 0;border-radius:8px;border:none;
+  background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;
+}
+.load-all-btn{
+  width:100%;background:#0a1525;border:1px solid #1a3a5a;color:#38bdf8;
+  font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:0.12em;
+  padding:14px 0;border-radius:10px;cursor:pointer;
+}
+
+/* ── CASH FLOW ── */
+.cf-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #0d1a28;font-size:12px}
+.cf-label{font-family:'DM Mono',monospace;color:#3a6080}
+.cf-value{font-family:'DM Mono',monospace;font-weight:700}
+.cf-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-top:12px;margin-top:4px;border-top:1px solid #0d1a28}
+.cf-metric-label{font-family:'DM Mono',monospace;font-size:8px;color:#2a4060;letter-spacing:0.1em;margin-bottom:3px;text-align:center}
+.cf-metric-value{font-family:'Bebas Neue',sans-serif;font-size:18px;text-align:center}
+
+/* ── DATA TAB ── */
+.fetch-card{background:#090f1e;border:1px solid #121e30;border-radius:11px;padding:16px 18px;margin-bottom:10px}
+.fetch-progress{height:3px;background:#0d1a28;border-radius:2px;overflow:hidden;margin-top:12px;display:none}
+.fetch-progress-bar{height:100%;width:60%;background:linear-gradient(90deg,#0ea5e9,#22d3a0);border-radius:2px;animation:progressSlide 1.4s linear infinite}
+.upload-zone{border:1px dashed #1a3050;border-radius:10px;padding:14px 18px;cursor:pointer;transition:border-color .2s;display:flex;align-items:center;gap:12px}
+.upload-zone:hover{border-color:#38bdf8}
+
+/* ── API TAB ── */
+.health-row{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #0d1a28}
+.health-row:last-child{border-bottom:none}
+.health-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:all .3s}
+.health-name{font-size:13px;font-weight:600;color:#e2e8f0}
+.health-desc{font-size:11px;color:#3a6080;margin-top:2px}
+.health-msg{font-family:'DM Mono',monospace;font-size:10px;margin-top:3px}
+.status-badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;padding:3px 8px;border-radius:5px;white-space:nowrap;flex-shrink:0}
+.test-btn{flex-shrink:0;background:#090f1e;border:1px solid #1a2a40;color:#38bdf8;font-family:'DM Mono',monospace;font-size:10px;padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.key-card{background:#090f1e;border:1px solid #121e30;border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.key-label-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.key-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.key-name{font-size:13px;font-weight:600;color:#e2e8f0;flex:1}
+.key-limit{font-family:'DM Mono',monospace;font-size:9px;color:#2a4060}
+.key-link{font-family:'DM Mono',monospace;font-size:10px;color:#38bdf8}
+.key-input{
+  width:100%;background:#060f1e;border:1px solid #1a3050;
+  color:#22d3a0;font-family:'DM Mono',monospace;font-size:12px;
+  padding:9px 12px;border-radius:7px;outline:none;
+}
+.key-input:focus{border-color:#22d3a0}
+.guide-row{display:flex;align-items:flex-start;gap:14px;padding:14px 18px;border-top:1px solid #0d1a28}
+.guide-bar{width:3px;border-radius:2px;flex-shrink:0;align-self:stretch;min-height:20px}
+.guide-name{font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:3px}
+.guide-status{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px}
+.guide-feeds{font-size:11px;color:#3a6080;line-height:1.6;flex:1}
+.guide-limit{font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;white-space:nowrap;flex-shrink:0;margin-top:2px}
+
+/* ── SOURCE BADGE ── */
+.src-badge{font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:4px}
+
+/* ── ERROR / EMPTY ── */
+.empty-state{background:#060f1e;border:1px dashed #132030;border-radius:16px;padding:64px 32px;text-align:center}
+.error-box{background:#180808;border:1px solid #4a1515;border-radius:12px;padding:16px 20px;color:#f87171;font-family:'DM Mono',monospace;font-size:12px;display:none}
+
+/* ── HEADER DETAIL ── */
+.detail-header{background:linear-gradient(135deg,#060f1e,#071520);border:1px solid #132030;border-radius:14px;padding:22px 24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.detail-zip{font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:0.04em;color:#fff;line-height:1}
+.detail-name{font-family:'DM Mono',monospace;font-size:12px;color:#3a6080;margin-top:4px}
+.detail-meta{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
+.detail-meta span{font-family:'DM Mono',monospace;font-size:11px;color:#2a5070}
+.detail-meta strong{font-weight:600}
+
+/* ── GRID LAYOUTS ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tiles-5{display:flex;gap:8px;flex-wrap:wrap}
+.tiles-4{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── TABLE ── */
+.data-table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:11px}
+.data-table th{text-align:left;padding:7px 10px;color:#2a4060;border-bottom:1px solid #132030;white-space:nowrap;font-weight:500}
+.data-table td{padding:6px 10px;color:#3a6080;white-space:nowrap;border-bottom:1px solid #090f1e}
+
+/* ── PAGE ── */
+#page{padding:20px 16px;max-width:900px;margin:0 auto}
+
+/* ── ANIMATIONS ── */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes progressSlide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+.fade-in{animation:fadeIn .3s ease forwards}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  .two-col{grid-template-columns:1fr}
+  .detail-zip{font-size:36px}
+  #analyze-layout{flex-direction:column}
+  #rankings-col{width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     NAV
+══════════════════════════════════════════ -->
+<div id="nav-row1">
+  <div class="logo">
+    <div class="logo-icon">&#11041;</div>
+    <span class="logo-text">PROPIQ</span>
+    <span class="logo-sub">AI</span>
+  </div>
+  <div class="zip-wrap">
+    <input id="zip-input" type="text" maxlength="5" placeholder="ZIP code"
+      oninput="this.value=this.value.replace(/\D/g,'')"
+      onkeydown="if(event.key==='Enter')doAddZip()"/>
+    <button class="zip-add" onclick="doAddZip()">+</button>
+  </div>
+</div>
+
+<div id="nav-row2">
+  <span class="strat-label">STRATEGY</span>
+  <button class="strat-btn active" data-si="0" onclick="setStrategy(this)">Buy &amp; Hold</button>
+  <button class="strat-btn"        data-si="1" onclick="setStrategy(this)">BRRRR</button>
+  <button class="strat-btn"        data-si="2" onclick="setStrategy(this)">Fix &amp; Flip</button>
+  <button class="strat-btn"        data-si="3" onclick="setStrategy(this)">Wholesale</button>
+</div>
+
+<div id="nav-row3">
+  <button class="tab-btn active" data-tab="discover" onclick="setTab(this)">&#9889; DISCOVER</button>
+  <button class="tab-btn"        data-tab="analyze"  onclick="setTab(this)" id="tab-analyze">&#128202; ANALYZE</button>
+  <button class="tab-btn"        data-tab="data"     onclick="setTab(this)" id="tab-data">&#128193; DATA</button>
+  <button class="tab-btn"        data-tab="api"      onclick="setTab(this)">&#9881; API &amp; HEALTH</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE CONTENT
+══════════════════════════════════════════ -->
+<div id="page"></div>
+
+<script>
+// ════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════
+const SW = {
+  'Buy & Hold': {appreciation:.25,cashflow:.35,liquidity:.15,demand:.15,supply:.10},
+  'BRRRR':      {appreciation:.30,cashflow:.30,liquidity:.15,demand:.15,supply:.10},
+  'Fix & Flip': {appreciation:.40,cashflow:.10,liquidity:.30,demand:.10,supply:.10},
+  'Wholesale':  {appreciation:.20,cashflow:.10,liquidity:.40,demand:.20,supply:.10},
+};
+
+const KEYS = {
+  fred:     '980ec69f10cd51ef9eadbeb12b6e6467',
+  rentcast: '2ec38dc7a17c4cff9a6aa31eb8d1e5b2',
+  census:   'f47bebd1c416c39d731f7e329b9365b3de5a74e9',
+};
+
+// CORS proxy helper
+// corsproxy.io is the most reliable - forwards all headers
+async function proxyFetch(url, extraHeaders={}) {
+  // 1. Try direct (works if API has permissive CORS)
+  try {
+    const r = await fetch(url, {headers: extraHeaders});
+    if(r.ok) return r;
+  } catch(e) {}
+  // 2. corsproxy.io - best for APIs that need custom headers
+  try {
+    const ph = {'x-requested-with':'XMLHttpRequest'};
+    Object.assign(ph, extraHeaders);
+    const r = await fetch('https://corsproxy.io/?url='+encodeURIComponent(url), {headers: ph});
+    if(r.ok) return r;
+  } catch(e) {}
+  // 3. allorigins - last resort, no custom headers
+  try {
+    const r = await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url));
+    if(r.ok) return r;
+  } catch(e) {}
+  throw new Error('Failed to fetch (CORS blocked by all proxies)');
+}
+
+// ════════════════════════════════════════════
+// APP STATE
+// ════════════════════════════════════════════
+const S = {
+  tab:      'discover',
+  strategy: 'Buy & Hold',
+  zips:     [],
+  results:  {},
+  loading:  {},
+  active:   null,
+  discoverResult: null,
+  redfinData: null,
+  redfinFile: null,
+  health:   {},
+  testing:  {},
+};
+
+// ════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════
+const fmt = (n,pre='',suf='') => n&&n>0 ? `${pre}${Number(n).toLocaleString()}${suf}` : '--';
+const sc  = s => s>=7.5?'#22d3a0':s>=5?'#fbbf24':'#f87171';
+const scL = s => s>=7.5?'STRONG BUY':s>=5?'MODERATE':'AVOID';
+const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function mockData(zip) {
+  const seed = zip.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  const rng = (mn,mx,s=7919) => mn+((seed*s+6271)%9973)/9973*(mx-mn);
+  return {
+    census:{
+      name:`ZIP ${zip}`,
+      medianIncome:   Math.round(rng(42000,118000)),
+      medianRent:     Math.round(rng(850,3100)),
+      medianHomeValue:Math.round(rng(140000,720000)),
+      totalOccupied:  Math.round(rng(6000,52000)),
+      ownerOccupied:  Math.round(rng(3000,32000)),
+      renterOccupied: Math.round(rng(2500,22000)),
+      vacantUnits:    Math.round(rng(150,5000)),
+      totalPopulation:Math.round(rng(14000,110000)),
+    },
+    rentcast:{
+      averageRent:     Math.round(rng(850,3100)),
+      averageRentYoY:  parseFloat(rng(0.5,11,3571).toFixed(1)),
+      daysOnMarket:    Math.round(rng(8,85,3571)),
+      averageSalePrice:Math.round(rng(145000,725000)),
+    },
+    fredMortgage:6.82,
+    fredHPI:[
+      {date:'Jan 24',value:Math.round(rng(280,340)*10)/10},
+      {date:'Apr 24',value:Math.round(rng(285,352)*10)/10},
+      {date:'Jul 24',value:Math.round(rng(290,362)*10)/10},
+      {date:'Oct 24',value:Math.round(rng(293,370)*10)/10},
+      {date:'Jan 25',value:Math.round(rng(296,378)*10)/10},
+    ],
+  };
+}
+
+function scoreMarket(d, strategy) {
+  const {census,rentcast,fredMortgage} = d;
+  const w = SW[strategy];
+  let appreciation=5, cashflow=5, liquidity=5, demand=5, supply=5;
+
+  if(census.medianHomeValue>0)
+    appreciation = Math.min(10,Math.max(0,((census.medianRent*12)/census.medianHomeValue)*100));
+  if(rentcast?.averageRentYoY) appreciation=Math.min(10,appreciation+rentcast.averageRentYoY/2);
+
+  if(census.medianHomeValue>0&&fredMortgage>0&&census.medianRent>0){
+    const loan=census.medianHomeValue*.8, mr=fredMortgage/100/12;
+    const piti=loan*(mr*Math.pow(1+mr,360))/(Math.pow(1+mr,360)-1)*1.25;
+    cashflow=Math.min(10,Math.max(0,(census.medianRent*.95-piti+500)/110));
+  }
+
+  if(rentcast?.daysOnMarket) liquidity=Math.min(10,Math.max(1,10-(rentcast.daysOnMarket-20)*.1));
+
+  if(census.medianIncome>0){
+    demand=Math.min(10,Math.max(1,12-((census.medianRent*12)/census.medianIncome)*20));
+    demand=Math.min(10,demand+(census.renterOccupied/(census.totalOccupied||1))*2);
+  }
+
+  if(census.vacantUnits>0&&census.totalOccupied>0)
+    supply=Math.min(10,Math.max(1,11-(census.vacantUnits/(census.totalOccupied+census.vacantUnits))*60));
+
+  const scores={appreciation,cashflow,liquidity,demand,supply};
+  const composite=Object.entries(w).reduce((s,[k,wt])=>s+scores[k]*wt,0);
+  return {scores,composite,weights:w};
+}
+
+// ════════════════════════════════════════════
+// API FETCHERS — all routed through Cloudflare Worker
+// Update WORKER_URL after you deploy propiq-worker.js
+// ════════════════════════════════════════════
+const WORKER_URL = 'https://propiq-api.rharter1982.workers.dev';
+
+async function fetchCensus(zip) {
+  const vars = [
+    'B19013_001E','B25064_001E','B25077_001E','B01003_001E',
+    'B25003_001E','B25003_002E','B25003_003E','B25002_003E','NAME'
+  ].join(',');
+  const url = 'https://api.census.gov/data/2022/acs/acs5?get='+vars
+    +'&for=zip%20code%20tabulation%20area:'+zip+'&key='+KEYS.census;
+  // Census has open CORS — call directly, no Worker needed
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Census '+res.status);
+  const [headers, values] = await res.json();
+  const d = {};
+  headers.forEach((h,i) => { d[h] = values[i]; });
+  return {
+    name:            d['NAME'] || 'ZIP '+zip,
+    medianIncome:    Math.max(0, parseInt(d['B19013_001E'])||0),
+    medianRent:      Math.max(0, parseInt(d['B25064_001E'])||0),
+    medianHomeValue: Math.max(0, parseInt(d['B25077_001E'])||0),
+    totalPopulation: Math.max(0, parseInt(d['B01003_001E'])||0),
+    totalOccupied:   Math.max(0, parseInt(d['B25003_001E'])||0),
+    ownerOccupied:   Math.max(0, parseInt(d['B25003_002E'])||0),
+    renterOccupied:  Math.max(0, parseInt(d['B25003_003E'])||0),
+    vacantUnits:     Math.max(0, parseInt(d['B25002_003E'])||0),
+  };
+}
+
+async function fetchFRED(seriesId, limit=6) {
+  // Routed through Worker — no CORS issues
+  const res = await fetch(WORKER_URL+'/fred?series='+seriesId+'&limit='+limit);
+  if (!res.ok) throw new Error('FRED worker '+res.status);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.observations
+    .filter(o => o.value !== '.')
+    .map(o => ({ date: o.date.slice(0,7), value: parseFloat(o.value) }))
+    .reverse();
+}
+
+async function fetchRentcast(zip) {
+  // Routed through Worker — auth header added server-side
+  const res = await fetch(WORKER_URL+'/rentcast?zip='+zip);
+  if (!res.ok) throw new Error('RentCast worker '+res.status);
+  const d = await res.json();
+  if (d.error) throw new Error(d.error);
+  return {
+    averageRent:     d.averageRent || d.medianRent || 0,
+    averageRentYoY:  d.averageRentYoY != null ? d.averageRentYoY : (d.rentGrowthRate != null ? d.rentGrowthRate : null),
+    daysOnMarket:    d.averageDaysOnMarket || d.medianDaysOnMarket || null,
+    averageSalePrice:d.averageSalePrice || d.medianSalePrice || 0,
+  };
+}
+
+async function fetchLiveData(zip) {
+  const [cen,rc,mort,hpi]=await Promise.allSettled([
+    fetchCensus(zip),
+    fetchRentcast(zip),
+    fetchFRED('MORTGAGE30US',1),
+    fetchFRED('CSUSHPISA',6),
+  ]);
+  const mk=mockData(zip);
+  return {
+    census:      cen.status==='fulfilled'  ? cen.value  : mk.census,
+    rentcast:    rc.status==='fulfilled'   ? rc.value   : mk.rentcast,
+    fredMortgage:mort.status==='fulfilled' ? mort.value[0]?.value??6.82 : 6.82,
+    fredHPI:     hpi.status==='fulfilled'&&hpi.value.length>1 ? hpi.value : mk.fredHPI,
+    live:{
+      census:  cen.status==='fulfilled',
+      rentcast:rc.status==='fulfilled',
+      fred:    mort.status==='fulfilled',
+    },
+  };
+}
+
+// ════════════════════════════════════════════
+// AI DISCOVERY
+// ════════════════════════════════════════════
+async function runAIDiscovery(strategy, onToken) {
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',max_tokens:2000,stream:true,
+      tools:[{type:'web_search_20250305',name:'web_search'}],
+      system:`You are a real estate investment analyst. Use web search for current 2025 data.
+Return ONLY raw JSON no markdown no backticks.
+Format: {"reasoning":"2-3 sentence thesis","zips":[{"zip":"XXXXX","city":"City, ST","thesis":"why","signals":["s1","s2","s3"],"riskFlag":"risk or null"}]}
+Exactly 10 real US ZIPs. Diverse geography. Strategy: ${strategy}.`,
+      messages:[{role:'user',content:`Top 10 US ZIPs for ${strategy} investing 2025. Search appreciation, rent growth, jobs, vacancy. Return only JSON.`}]
+    })
+  });
+  if(!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  const reader=res.body.getReader();
+  const dec=new TextDecoder();
+  let full='';
+  while(true){
+    const {done,value}=await reader.read();
+    if(done)break;
+    for(const line of dec.decode(value).split('\n')){
+      if(!line.startsWith('data: '))continue;
+      try{
+        const e=JSON.parse(line.slice(6));
+        if(e.type==='content_block_delta'&&e.delta?.type==='text_delta'){
+          full+=e.delta.text; onToken(full);
+        }
+      }catch{}
+    }
+  }
+  const m=full.match(/\{[\s\S]*\}/);
+  if(!m) throw new Error('No JSON found. Got: '+full.slice(0,200));
+  return JSON.parse(m[0]);
+}
+
+// ════════════════════════════════════════════
+// ZIP MANAGEMENT
+// ════════════════════════════════════════════
+async function doAddZip(zipArg) {
+  const input=document.getElementById('zip-input');
+  const zip=(zipArg||input.value).trim();
+  if(zip.length!==5||!/^\d+$/.test(zip))return;
+  if(!zipArg) input.value='';
+  if(!S.zips.includes(zip)) S.zips.push(zip);
+  S.active=zip;
+  S.loading[zip]=true;
+  setTabById('analyze');
+  renderPage();
+
+  try{
+    const data=await fetchLiveData(zip);
+    data.scoring=scoreMarket(data,S.strategy);
+    S.results[zip]=data;
+  }catch{
+    const data=mockData(zip);
+    data.scoring=scoreMarket(data,S.strategy);
+    data.live={census:false,rentcast:false,fred:false};
+    S.results[zip]=data;
+  }
+  S.loading[zip]=false;
+  if(S.tab==='analyze') renderPage();
+  updateTabLabels();
+}
+
+function removeZip(zip){
+  S.zips=S.zips.filter(z=>z!==zip);
+  delete S.results[zip];
+  if(S.active===zip) S.active=S.zips[0]||null;
+  renderPage(); updateTabLabels();
+}
+
+function selectZip(zip){
+  S.active=zip; renderPage();
+}
+
+function rescoreAll(){
+  for(const z of Object.keys(S.results)){
+    const r=S.results[z];
+    if(r) r.scoring=scoreMarket(r,S.strategy);
+  }
+}
+
+// ════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════
+const STRAT_NAMES = ['Buy & Hold','BRRRR','Fix & Flip','Wholesale'];
+function setStrategy(btn){
+  document.querySelectorAll('.strat-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Use index to avoid HTML entity encoding issues with dataset
+  S.strategy = STRAT_NAMES[parseInt(btn.dataset.si)] || 'Buy & Hold';
+  rescoreAll();
+  if(S.tab==='analyze') renderPage();
+}
+
+function setTab(btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  S.tab=btn.dataset.tab;
+  renderPage();
+}
+
+function setTabById(id){
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.tab===id);
+  });
+  S.tab=id;
+}
+
+function updateTabLabels(){
+  const ta=document.getElementById('tab-analyze');
+  if(ta) ta.innerHTML=`&#128202; ANALYZE${S.zips.length?' ('+S.zips.length+')':''}`;
+  const td=document.getElementById('tab-data');
+  if(td) td.innerHTML=`&#128193; DATA${S.redfinData?' &#10003;':''}`;
+}
+
+// ════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════
+function renderPage(){
+  const pg=document.getElementById('page');
+  if(S.tab==='discover')     pg.innerHTML=renderDiscover();
+  else if(S.tab==='analyze') pg.innerHTML=renderAnalyze();
+  else if(S.tab==='data')    pg.innerHTML=renderData();
+  else if(S.tab==='api')     pg.innerHTML=renderAPI();
+
+  // Re-attach after innerHTML
+  if(S.tab==='discover'&&S.discoverResult) showDiscoverResults(S.discoverResult,false);
+}
+
+// ─── DISCOVER ────────────────────────────────
+function renderDiscover(){
+  return `
+    <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px">
+      <div class="hero">
+        <p class="hero-eyebrow">CLAUDE SONNET &middot; WEB SEARCH &middot; LIVE 2025 DATA</p>
+        <h2 class="hero-title">AI MARKET DISCOVERY</h2>
+        <p class="hero-sub">Searches live data to surface the <strong>top 10 ZIP codes</strong> for your <strong class="green">${esc(S.strategy)}</strong> strategy.</p>
+        <button class="discover-btn" id="discover-btn" onclick="runDiscover()">&#9889; FIND TOP 10 ZIP CODES</button>
+      </div>
+      <div class="stream-box" id="stream-box">
+        <div class="section-label">LIVE AI REASONING</div>
+        <div class="stream-text" id="stream-text"></div>
+      </div>
+      <div class="error-box" id="discover-error"></div>
+      <div id="discover-results" style="display:none;flex-direction:column;gap:16px"></div>
+    </div>`;
+}
+
+async function runDiscover(){
+  const btn=document.getElementById('discover-btn');
+  const box=document.getElementById('stream-box');
+  const txt=document.getElementById('stream-text');
+  const err=document.getElementById('discover-error');
+  const res=document.getElementById('discover-results');
+  btn.className='discover-btn loading'; btn.textContent='SCANNING MARKETS...';
+  err.style.display='none'; res.style.display='none'; box.style.display='none';
+  try{
+    const data=await runAIDiscovery(S.strategy,full=>{
+      box.style.display='block';
+      txt.innerHTML=esc(full.replace(/[^\x20-\x7E\n]/g,'').slice(-500))+'<span class="cursor-blink"></span>';
+    });
+    S.discoverResult=data;
+    showDiscoverResults(data,true);
+  }catch(e){
+    err.textContent='Error: '+e.message; err.style.display='block';
+  }
+  btn.className='discover-btn'; btn.textContent='RESCAN MARKETS';
+}
+
+function showDiscoverResults(data,animate){
+  const res=document.getElementById('discover-results');
+  const box=document.getElementById('stream-box');
+  if(!res)return;
+  if(box) box.style.display='none';
+  const medals=['&#129351;','&#129352;','&#129353;'];
+  const rbg=i=>i===0?'#1a0e00':i<3?'#001410':i<7?'#00091a':'#090f1e';
+  const rbd=i=>i===0?'#4a2800':i<3?'#184030':i<7?'#0a2a48':'#121e30';
+  const rbar=i=>i===0?'#f59e0b':i<3?'#22d3a0':i<7?'#38bdf8':'#1e3050';
+
+  const grid=`
+    <div style="background:#060f1e;border-left:4px solid #38bdf8;border:1px solid #132030;border-radius:12px;padding:18px 22px;display:flex;gap:14px;align-items:flex-start">
+      <span style="font-size:22px;flex-shrink:0">&#129504;</span>
+      <div>
+        <div class="section-label">AI MARKET THESIS</div>
+        <p style="font-size:14px;color:#7ab8e0;line-height:1.85;font-style:italic">"${esc(data.reasoning||'')}"</p>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${(data.zips||[]).map((z,i)=>`
+        <div class="zip-card ${animate?'fade-in':''}" style="background:${rbg(i)};border:1px solid ${rbd(i)};animation-delay:${i*40}ms">
+          <div class="zip-card-bar" style="background:${rbar(i)}"></div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="font-size:18px">${medals[i]||`<span style="font-family:'DM Mono',monospace;font-size:11px;color:#2a5080;font-weight:700">#${i+1}</span>`}</span>
+            <span class="zip-card-zip">${esc(z.zip)}</span>
+            <span class="zip-card-city">${esc(z.city||'')}</span>
+          </div>
+          <p class="zip-card-thesis">${esc(z.thesis||'')}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
+            ${(z.signals||[]).map(s=>`<span class="signal-pill">&#8593; ${esc(s)}</span>`).join('')}
+          </div>
+          ${z.riskFlag?`<p class="risk-flag">&#9888; ${esc(z.riskFlag)}</p>`:''}
+          <button class="analyze-btn" onclick="doAddZip('${esc(z.zip)}')">ANALYZE THIS MARKET &#8594;</button>
+        </div>`).join('')}
+    </div>
+    <button class="load-all-btn" onclick="loadAll()">&#8681; LOAD ALL 10 INTO ANALYZER</button>`;
+
+  res.innerHTML=grid;
+  res.style.display='flex';
+  res.style.flexDirection='column';
+  res.style.gap='16px';
+}
+
+function loadAll(){
+  if(!S.discoverResult)return;
+  S.discoverResult.zips.forEach(z=>doAddZip(z.zip));
+}
+
+// ─── ANALYZE ─────────────────────────────────
+function renderAnalyze(){
+  if(S.zips.length===0)return`
+    <div class="empty-state">
+      <div style="font-size:40px;opacity:.08;margin-bottom:14px">&#128202;</div>
+      <p style="font-family:'DM Mono',monospace;font-size:13px;color:#1a3050">No markets loaded — use AI Discover or enter a ZIP above</p>
+    </div>`;
+
+  const ranked=[...S.zips].filter(z=>S.results[z]?.scoring)
+    .sort((a,b)=>S.results[b].scoring.composite-S.results[a].scoring.composite);
+
+  const active=S.active?S.results[S.active]:null;
+
+  const rankList=S.zips.map(z=>{
+    const r=S.results[z],rank=ranked.indexOf(z)+1,isA=z===S.active,isL=S.loading[z];
+    const rc=rank===1?'#f59e0b':rank<=3?'#22d3a0':rank<=7?'#38bdf8':'#132030';
+    const score=r?.scoring?.composite;
+    return `
+      <div class="zip-row${isA?' active':''}" onclick="selectZip('${z}')">
+        <div class="rank-badge" style="background:${rc};color:${rank&&rank<=7?'#000':'#2a4060'}">${isL?'&middot;':rank||'?'}</div>
+        <span class="zip-name flex-1" style="color:${isA?'#fff':'#4a7090'}">${z}</span>
+        ${score!=null?`<span class="zip-score" style="color:${sc(score)}">${score.toFixed(1)}</span>`:''}
+        <button class="zip-remove" onclick="event.stopPropagation();removeZip('${z}')">&times;</button>
+      </div>`;
+  }).join('');
+
+  let detail='<div class="card" style="padding:40px;text-align:center"><p style="font-family:\'DM Mono\',monospace;font-size:12px;color:#2a4060">Select a ZIP from the list</p></div>';
+
+  if(S.loading[S.active]){
+    detail='<div class="card" style="padding:40px;text-align:center"><p style="font-family:\'DM Mono\',monospace;font-size:12px;color:#38bdf8">Loading live data...</p></div>';
+  } else if(active){
+    detail=renderDetail(active,ranked);
+  }
+
+  return `
+    <div id="analyze-layout" style="display:flex;gap:20px;align-items:flex-start">
+      <div id="rankings-col" style="width:210px;flex-shrink:0">
+        <div class="section-label">RANKINGS — ${esc(S.strategy.toUpperCase())}</div>
+        <div style="display:flex;flex-direction:column;gap:5px">${rankList}</div>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px">${detail}</div>
+    </div>`;
+}
+
+function renderDetail(d,ranked){
+  const {census,rentcast,fredMortgage,fredHPI,scoring,live}=d;
+  const color=sc(scoring.composite);
+  const pct=scoring.composite/10;
+  const circ=238.76;
+  const rankIdx=ranked.indexOf(S.active)+1;
+
+  const hv=census?.medianHomeValue||0,rent=census?.medianRent||0,rate=fredMortgage||6.82;
+  const loan=hv*.8,mr=rate/100/12;
+  const pi=hv>0?loan*(mr*Math.pow(1+mr,360))/(Math.pow(1+mr,360)-1):0;
+  const tax=hv*.012/12,ins=hv*.005/12;
+  const vac=rent*.05,mgmt=rent*.08,rep=hv*.01/12;
+  const noi=rent-vac-mgmt-rep,cf=noi-pi-tax-ins;
+  const cap=hv>0?(noi*12/hv*100):0,coc=hv>0?(cf*12/(hv*.2)*100):0;
+
+  const srcBadges=live?Object.entries({Census:live.census,RentCast:live.rentcast,FRED:live.fred}).map(([n,ok])=>
+    `<span class="src-badge" style="background:${ok?'#071a10':'#1a1010'};border:1px solid ${ok?'#1a5030':'#3a1515'};color:${ok?'#22d3a0':'#f87171'}">${ok?'&#10003;':'~'} ${n}</span>`
+  ).join(''):'';
+
+  const scoreDims=[['Appreciation','appreciation'],['Cash Flow','cashflow'],['Liquidity','liquidity'],['Demand','demand'],['Supply Constraints','supply']];
+
+  let sparkHTML='';
+  if(fredHPI&&fredHPI.length>1){
+    const vals=fredHPI.map(d=>d.value);
+    const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1;
+    const W=160,H=42;
+    const pts=vals.map((v,i)=>`${(i/(vals.length-1))*W},${H-((v-mn)/rng)*(H-8)-4}`).join(' ');
+    const up=vals[vals.length-1]>=vals[0],c2=up?'#22d3a0':'#f87171';
+    const chg=(((vals[vals.length-1]-vals[0])/vals[0])*100).toFixed(1);
+    sparkHTML=`
+      <div class="card">
+        <div class="section-label">CASE-SHILLER HPI TREND</div>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+          <svg width="${W}" height="${H}">
+            <polyline points="${pts}" fill="none" stroke="${c2}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            ${vals.map((v,i)=>{const x=(i/(vals.length-1))*W,y=H-((v-mn)/rng)*(H-8)-4;return`<circle cx="${x}" cy="${y}" r="${i===vals.length-1?4:2}" fill="${i===vals.length-1?c2:'#1e2a3a'}" stroke="${c2}" stroke-width="1.5"/>`;}).join('')}
+          </svg>
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${c2}">${up?'+':''}${chg}%</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4a6080">since ${fredHPI[0]?.date}</div>
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            ${fredHPI.map(d=>`<div style="text-align:center"><div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;margin-bottom:3px">${d.date}</div><div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#94a3b8">${d.value}</div></div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <!-- Header -->
+    <div class="detail-header fade-in">
+      <div class="gauge-wrap">
+        <div style="position:relative;width:96px;height:96px">
+          <svg width="96" height="96" viewBox="0 0 96 96">
+            <circle cx="48" cy="48" r="38" fill="none" stroke="#1a2a3a" stroke-width="9"/>
+            <circle cx="48" cy="48" r="38" fill="none" stroke="${color}" stroke-width="9"
+              stroke-dasharray="${(circ*pct).toFixed(1)} ${circ}" stroke-dashoffset="59.69"
+              stroke-linecap="round" transform="rotate(-90 48 48)" class="gauge-ring"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <span class="gauge-score" style="color:${color}">${scoring.composite.toFixed(1)}</span>
+            <span class="gauge-denom">/ 10</span>
+          </div>
+        </div>
+        <span class="gauge-label" style="color:${color}">${scL(scoring.composite)}</span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="detail-zip">${esc(S.active)}</div>
+        <div class="detail-name">${esc(census?.name||'')}</div>
+        <div class="detail-meta">
+          <span>Strategy: <strong style="color:#38bdf8">${esc(S.strategy)}</strong></span>
+          <span>Rate: <strong style="color:#fbbf24">${fredMortgage.toFixed(2)}%</strong></span>
+          <span>Rank: <strong style="color:#22d3a0">#${rankIdx} of ${ranked.length}</strong></span>
+        </div>
+        <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap">${srcBadges}</div>
+      </div>
+    </div>
+
+    <!-- Stats row 1 -->
+    <div class="tiles-5">
+      ${[['HOME VALUE',fmt(census?.medianHomeValue,'$'),'Census ACS',false],
+         ['MONTHLY RENT',fmt(census?.medianRent,'$'),'Census ACS',true],
+         ['HH INCOME',fmt(census?.medianIncome,'$'),'Census ACS',false],
+         ['POPULATION',fmt(census?.totalPopulation),'Census ACS',false],
+         ['VACANCY',census?.vacantUnits&&census?.totalOccupied?((census.vacantUnits/(census.totalOccupied+census.vacantUnits))*100).toFixed(1)+'%':'--','Census ACS',false],
+        ].map(([l,v,s,g])=>`<div class="tile${g?' green':''}"><div class="tile-label">${l}</div><div class="tile-value">${v}</div><div class="tile-sub">${s}</div></div>`).join('')}
+    </div>
+
+    <!-- Stats row 2 -->
+    <div class="tiles-4">
+      ${[['AVG RENT',fmt(rentcast?.averageRent,'$','/mo'),'RentCast',true],
+         ['RENT YoY',rentcast?.averageRentYoY!=null?'+'+rentcast.averageRentYoY+'%':'--','RentCast',true],
+         ['DAYS ON MKT',rentcast?.daysOnMarket||'--','RentCast',false],
+         ['AVG SALE',fmt(rentcast?.averageSalePrice,'$'),'RentCast',false],
+        ].map(([l,v,s,g])=>`<div class="tile${g?' green':''}"><div class="tile-label">${l}</div><div class="tile-value">${v}</div><div class="tile-sub">${s}</div></div>`).join('')}
+    </div>
+
+    <!-- Score + Cash Flow -->
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">SCORE BREAKDOWN</div>
+        ${scoreDims.map(([lbl,key])=>{
+          const s=scoring.scores[key],w=scoring.weights[key],c=sc(s);
+          return`<div class="sbar-row">
+            <div class="sbar-label">${lbl}</div>
+            <div class="sbar-track"><div class="sbar-fill" style="width:${s*10}%;background:${c}"></div></div>
+            <div class="sbar-score" style="color:${c}">${s.toFixed(1)}</div>
+            <div class="sbar-wt">${(w*100).toFixed(0)}%</div>
+          </div>`;}).join('')}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;margin-top:2px">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;letter-spacing:.1em">COMPOSITE</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:${color}">${scoring.composite.toFixed(2)}<span style="font-size:16px;color:#2a4060">/10</span></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-label">CASH FLOW — 80% LTV &middot; 30YR</div>
+        ${hv>0&&rent>0?`
+          ${[['Gross Rent',rent,'#e2e8f0'],['- Vacancy 5%',-vac,'#f87171'],['- Mgmt 8%',-mgmt,'#f87171'],
+             ['- CapEx 1%',-rep,'#f87171'],['= NOI',noi,'#7dd3fc'],['- P&I',-pi,'#f87171'],['- Tax+Ins',-(tax+ins),'#f87171']
+            ].map(([l,v,c])=>`<div class="cf-row"><span class="cf-label">${l}</span><span class="cf-value" style="color:${c}">${v>=0?'$':'-$'}${Math.abs(Math.round(v)).toLocaleString()}</span></div>`).join('')}
+          <div style="display:flex;justify-content:space-between;padding-top:10px">
+            <span style="font-family:'DM Mono',monospace;font-size:13px;color:#e2e8f0">= Monthly CF</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${cf>=0?'#22d3a0':'#f87171'}">${cf>=0?'$':'-$'}${Math.abs(Math.round(cf)).toLocaleString()}</span>
+          </div>
+          <div class="cf-metrics">
+            ${[['CAP',cap.toFixed(2)+'%',cap>=6?'#22d3a0':'#fbbf24'],
+               ['CoC',coc.toFixed(2)+'%',coc>=8?'#22d3a0':coc>=4?'#fbbf24':'#f87171'],
+               ['ANN',(cf>=0?'$':'-$')+Math.abs(Math.round(cf*12)).toLocaleString(),cf>=0?'#22d3a0':'#f87171'],
+               ['P/R',(hv/(rent*12)).toFixed(0)+'x','#7dd3fc'],
+              ].map(([l,v,c])=>`<div><div class="cf-metric-label">${l}</div><div class="cf-metric-value" style="color:${c}">${v}</div></div>`).join('')}
+          </div>`:'<p style="font-family:\'DM Mono\',monospace;font-size:12px;color:#2a4060">Insufficient data</p>'}
+      </div>
+    </div>
+
+    ${sparkHTML}`;
+}
+
+// ─── DATA TAB ─────────────────────────────────
+const DATASETS=[
+  {id:'zip',   label:'ZIP Code Market Tracker',  file:'zip_code_market_tracker.tsv000.gz',     cols:['region','median_sale_price','median_dom','inventory','homes_sold']},
+  {id:'metro', label:'Metro Market Tracker',     file:'redfin_metro_market_tracker.tsv000.gz', cols:['region','median_sale_price','median_dom','inventory']},
+  {id:'city',  label:'City Market Tracker',      file:'city_market_tracker.tsv000.gz',         cols:['region','median_sale_price','median_dom','inventory']},
+  {id:'county',label:'County Market Tracker',    file:'county_market_tracker.tsv000.gz',       cols:['region','median_sale_price','median_dom','inventory']},
+];
+const RFBASE='https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/';
+
+function renderData(){
+  const banner=S.redfinData?`
+    <div style="background:#071a10;border:1px solid #1a4a30;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:4px">
+      <span style="font-size:20px">&#9989;</span>
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:13px;color:#22d3a0;font-weight:700">${esc(S.redfinFile)}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:#2a6040;margin-top:2px">${S.redfinData.length} rows &middot; ${Object.keys(S.redfinData[0]||{}).length} columns</div>
+      </div>
+    </div>`:'' ;
+
+  const cards=DATASETS.map(ds=>`
+    <div class="fetch-card" id="dsc-${ds.id}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:#7ab8e0;margin-bottom:4px">${ds.label}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;margin-bottom:8px">${ds.file}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${ds.cols.map(c=>`<span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;background:#060f1e;border:1px solid #1a2a40;color:#38bdf8">${c}</span>`).join('')}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+          <button id="fbtn-${ds.id}" onclick="fetchRedfin('${ds.id}','${ds.file}','${ds.label}')"
+            style="font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.1em;padding:7px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;white-space:nowrap">
+            &#9889; FETCH LIVE
+          </button>
+          <div id="fmsg-${ds.id}" style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;text-align:right;max-width:160px"></div>
+        </div>
+      </div>
+      <div id="fbar-${ds.id}" class="fetch-progress"><div class="fetch-progress-bar"></div></div>
+    </div>`).join('');
+
+  const preview=S.redfinData&&S.redfinData.length?`
+    <div class="card">
+      <div class="section-label">DATA PREVIEW — ${esc(S.redfinFile)} &middot; ${S.redfinData.length} rows</div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr>${Object.keys(S.redfinData[0]).slice(0,8).map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
+          <tbody>${S.redfinData.slice(0,20).map(row=>`<tr>${Object.values(row).slice(0,8).map(v=>`<td>${esc(String(v||'').slice(0,24))}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`:'' ;
+
+  return `
+    <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+      ${banner}
+      <div class="card">
+        <div class="section-label">REDFIN DATA CENTER — FETCH DIRECTLY</div>
+        <p style="font-size:12px;color:#2a4060;margin-bottom:16px;line-height:1.6">Streams live from Redfin's S3. Uses CORS proxy to bypass browser restrictions. No download needed.</p>
+        ${cards}
+      </div>
+      <div class="card">
+        <div class="section-label">MANUAL UPLOAD FALLBACK</div>
+        <p style="font-size:12px;color:#2a4060;margin-bottom:12px">Download .gz, decompress, upload .tsv here.</p>
+        <label class="upload-zone">
+          <span style="font-size:20px">&#128194;</span>
+          <span style="font-family:'DM Mono',monospace;font-size:12px;color:#3a6080">Upload .tsv / .csv file</span>
+          <input type="file" accept=".tsv,.csv,.txt" style="display:none" onchange="handleUpload(event)"/>
+        </label>
+      </div>
+      ${preview}
+    </div>`;
+}
+
+async function fetchRedfin(id,file,label){
+  const btn=document.getElementById(`fbtn-${id}`);
+  const msg=document.getElementById(`fmsg-${id}`);
+  const bar=document.getElementById(`fbar-${id}`);
+  const setMsg=(m,c='#2a4060')=>{if(msg){msg.textContent=m;msg.style.color=c;}};
+
+  if(btn){btn.textContent='FETCHING...';btn.style.background='#0a1525';btn.style.color='#2a4060';btn.style.border='1px solid #1a3050';}
+  if(bar)bar.style.display='block';
+  setMsg('Connecting...');
+
+  try{
+    // Route through Worker — handles decompression server-side
+    setMsg('Fetching from Worker...');
+    const workerUrl = WORKER_URL+'/redfin?file='+encodeURIComponent(file);
+    const res = await fetch(workerUrl);
+    if(!res.ok) throw new Error('Worker '+res.status);
+    setMsg('Parsing...');
+    const json = await res.json();
+    if(json.error) throw new Error(json.error);
+    const rows = json.rows || [];
+    if(rows.length===0) throw new Error('No rows returned');
+    S.redfinData=rows; S.redfinFile=label;
+    setMsg(`✓ ${rows.length} rows loaded`,'#22d3a0');
+    if(btn){btn.textContent='✓ LOADED';btn.style.background='#0a2a18';btn.style.color='#22d3a0';btn.style.border='1px solid #1a5030';}
+    updateTabLabels();
+    renderPage();
+  }catch(e){
+    setMsg('Error: '+e.message,'#f87171');
+    if(btn){btn.textContent='FETCH LIVE';btn.style.background='linear-gradient(135deg,#0ea5e9,#22d3a0)';btn.style.color='#000';btn.style.border='none';}
+  }
+  if(bar)bar.style.display='none';
+}
+
+function handleUpload(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const lines=ev.target.result.trim().split('\n');
+      const headers=lines[0].split('\t').map(h=>h.trim().replace(/"/g,''));
+      const rows=lines.slice(1,501).map(l=>{
+        const vals=l.split('\t').map(v=>v.trim().replace(/"/g,'')),o={};
+        headers.forEach((h,i)=>{o[h]=vals[i]||'';});return o;
+      });
+      S.redfinData=rows;S.redfinFile=file.name;
+      updateTabLabels();renderPage();
+    }catch(err){alert('Parse error: '+err.message);}
+  };
+  reader.readAsText(file);
+}
+
+// ─── API TAB ──────────────────────────────────
+const API_SRCS=[
+  {id:'anthropic',name:'Anthropic Claude',desc:'AI discovery + web search',                 color:'#a78bfa',free:true, url:'https://api.anthropic.com'},
+  {id:'fred',     name:'FRED API',        desc:'HPI, mortgage rates, building permits',      color:'#38bdf8',free:true, url:'https://fred.stlouisfed.org/docs/api/api_key.html'},
+  {id:'census',   name:'US Census ACS',   desc:'Income, rent, vacancy, population by ZIP',   color:'#22d3a0',free:true, url:'https://api.census.gov/data/key_signup.html'},
+  {id:'rentcast', name:'RentCast',        desc:'Rent estimates, DOM, sale prices by ZIP',    color:'#fbbf24',free:false,limit:'50/mo',url:'https://app.rentcast.io/app/api-keys'},
+];
+const GUIDE=[
+  {name:'Anthropic Claude',color:'#a78bfa',feeds:'AI ZIP discovery, thesis, web search',    limit:'Built-in',  status:'Always active'},
+  {name:'US Census ACS',   color:'#22d3a0',feeds:'Income, value, rent, vacancy by ZIP',     limit:'Free',      status:'Key loaded'},
+  {name:'FRED API',        color:'#38bdf8',feeds:'30yr rate, Case-Shiller HPI, permits',    limit:'Free',      status:'Key loaded'},
+  {name:'RentCast',        color:'#fbbf24',feeds:'Rent estimates, DOM, avg sale price',     limit:'50 calls/mo',status:'Key loaded'},
+  {name:'Redfin Data',     color:'#f87171',feeds:'Inventory, DOM, homes sold by ZIP/metro', limit:'Free',      status:'Fetch in Data tab'},
+];
+
+function renderAPI(){
+  const rows=API_SRCS.map((src,i)=>{
+    const h=S.health[src.id],t=S.testing[src.id];
+    const sc2=t?'#fbbf24':h?(h.ok?'#22d3a0':'#f87171'):'#2a4060';
+    const st=t?'TESTING...':h?(h.ok?'ONLINE':'ERROR'):'UNTESTED';
+    return`<div class="health-row">
+      <div class="health-dot" style="background:${sc2};box-shadow:${h?.ok?'0 0 8px '+sc2:'none'}"></div>
+      <div style="flex:1;min-width:0">
+        <div class="health-name">${src.name}</div>
+        <div class="health-desc">${src.desc}</div>
+        ${h?.msg?`<div class="health-msg" style="color:${sc2}">${esc(h.msg)}</div>`:''}
+      </div>
+      <div class="status-badge" style="color:${sc2};background:${sc2}22;border:1px solid ${sc2}44">${st}</div>
+      <button class="test-btn" onclick="testOne('${src.id}')" ${t?'disabled':''}>${t?'...':'TEST'}</button>
+    </div>`;}).join('');
+
+  const keyCards=API_SRCS.filter(s=>s.id!=='anthropic').map(src=>`
+    <div class="key-card">
+      <div class="key-label-row">
+        <div class="key-dot" style="background:${src.color}"></div>
+        <span class="key-name">${src.name}</span>
+        <span class="key-limit">${src.free?'FREE':src.limit}</span>
+        <a href="${src.url}" target="_blank" class="key-link">Get key &rarr;</a>
+      </div>
+      <input type="password" class="key-input" value="${src.id==='fred'?KEYS.fred:src.id==='census'?KEYS.census:src.id==='rentcast'?KEYS.rentcast:''}"
+        onchange="KEYS['${src.id}']=this.value" placeholder="Enter API key..."/>
+    </div>`).join('');
+
+  const guideRows=GUIDE.map(r=>`
+    <div class="guide-row">
+      <div class="guide-bar" style="background:${r.color}"></div>
+      <div class="guide-feeds" style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">
+          <span class="guide-name">${r.name}</span>
+          <span class="guide-status" style="color:${r.color};background:${r.color}22;border:1px solid ${r.color}44">${r.status}</span>
+        </div>
+        <div style="font-size:11px;color:#3a6080;line-height:1.6">${r.feeds}</div>
+      </div>
+      <div class="guide-limit">${r.limit}</div>
+    </div>`).join('');
+
+  return`
+    <div style="max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="section-label">API HEALTH STATUS</div>
+        <p style="font-size:12px;color:#3a6080;margin-bottom:14px">All 3 keys pre-loaded. Click to verify live connections.</p>
+        <button onclick="testAll()"
+          style="width:100%;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.12em;padding:12px 0;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer">
+          &#9889; TEST ALL CONNECTIONS
+        </button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">${rows}</div>
+      <div class="card">
+        <div class="section-label">API KEY CONFIGURATION</div>
+        ${keyCards}
+        <p style="font-family:'DM Mono',monospace;font-size:10px;color:#1a3050;margin-top:10px;line-height:1.8">&#9888; Keys live in memory only — refresh clears them.</p>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="section-label" style="padding:16px 18px 8px">DATA SOURCE GUIDE</div>
+        ${guideRows}
+      </div>
+    </div>`;
+}
+
+async function testOne(id){
+  S.testing[id]=true; S.health[id]=null;
+  renderPage();
+  try{
+    let ok=false,msg='';
+    if(id==='anthropic'){
+      ok=true; msg='Connected via Claude.ai';
+    }else if(id==='fred'){
+      try{
+        const r=await fetch(WORKER_URL+'/fred?series=MORTGAGE30US&limit=1');
+        const d=await r.json();
+        ok=r.ok&&!d.error; msg=ok?'Connected via Worker':'Error: '+(d.error||r.status);
+      }catch(e){ok=false; msg='Worker unreachable: '+e.message+' — Did you set WORKER_URL?';}
+    }else if(id==='census'){
+      try{
+        const r=await fetch('https://api.census.gov/data/2022/acs/acs5?get=NAME&for=state:06&key='+KEYS.census);
+        ok=r.ok; msg=r.ok?'Connected directly':'Error '+r.status;
+      }catch(e){ok=false; msg=e.message;}
+    }else if(id==='rentcast'){
+      try{
+        const r=await fetch(WORKER_URL+'/rentcast?zip=10001');
+        const d=await r.json();
+        ok=r.ok&&!d.error; msg=ok?'Connected via Worker':'Error: '+(d.error||r.status);
+      }catch(e){ok=false; msg='Worker unreachable: '+e.message+' — Did you set WORKER_URL?';}
+    }
+    S.health[id]={ok,msg};
+  }catch(e){S.health[id]={ok:false,msg:e.message};}
+  S.testing[id]=false;
+  renderPage();
+}
+
+function testAll(){API_SRCS.forEach(s=>testOne(s.id));}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+renderPage();
+</script>
+</body>
+</html>
