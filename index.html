@@ -287,10 +287,10 @@ table{border-collapse:collapse}
 
 <div id="nav-row2">
   <span class="strat-label">STRATEGY</span>
-  <button class="strat-btn active" data-s="Buy &amp; Hold"  onclick="setStrategy(this)">Buy &amp; Hold</button>
-  <button class="strat-btn"        data-s="BRRRR"           onclick="setStrategy(this)">BRRRR</button>
-  <button class="strat-btn"        data-s="Fix &amp; Flip"  onclick="setStrategy(this)">Fix &amp; Flip</button>
-  <button class="strat-btn"        data-s="Wholesale"       onclick="setStrategy(this)">Wholesale</button>
+  <button class="strat-btn active" data-si="0" onclick="setStrategy(this)">Buy &amp; Hold</button>
+  <button class="strat-btn"        data-si="1" onclick="setStrategy(this)">BRRRR</button>
+  <button class="strat-btn"        data-si="2" onclick="setStrategy(this)">Fix &amp; Flip</button>
+  <button class="strat-btn"        data-si="3" onclick="setStrategy(this)">Wholesale</button>
 </div>
 
 <div id="nav-row3">
@@ -322,12 +322,28 @@ const KEYS = {
   census:   'f47bebd1c416c39d731f7e329b9365b3de5a74e9',
 };
 
-// CORS proxies — tried in order
-const PROXIES = [
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://cors-anywhere.herokuapp.com/${url}`,
-];
+// CORS proxy helper
+// corsproxy.io is the most reliable - forwards all headers
+async function proxyFetch(url, extraHeaders={}) {
+  // 1. Try direct (works if API has permissive CORS)
+  try {
+    const r = await fetch(url, {headers: extraHeaders});
+    if(r.ok) return r;
+  } catch(e) {}
+  // 2. corsproxy.io - best for APIs that need custom headers
+  try {
+    const ph = {'x-requested-with':'XMLHttpRequest'};
+    Object.assign(ph, extraHeaders);
+    const r = await fetch('https://corsproxy.io/?url='+encodeURIComponent(url), {headers: ph});
+    if(r.ok) return r;
+  } catch(e) {}
+  // 3. allorigins - last resort, no custom headers
+  try {
+    const r = await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url));
+    if(r.ok) return r;
+  } catch(e) {}
+  throw new Error('Failed to fetch (CORS blocked by all proxies)');
+}
 
 // ════════════════════════════════════════════
 // APP STATE
@@ -419,22 +435,7 @@ function scoreMarket(d, strategy) {
 // ════════════════════════════════════════════
 // API FETCHERS — with CORS proxy fallback
 // ════════════════════════════════════════════
-async function fetchWithProxy(url, opts={}) {
-  // Try direct first
-  try {
-    const r = await fetch(url, opts);
-    if(r.ok) return r;
-  } catch {}
-  // Try proxies (for non-credentialed gets only)
-  if(opts.method && opts.method !== 'GET') throw new Error('CORS blocked');
-  for(const proxy of PROXIES) {
-    try {
-      const r = await fetch(proxy(url));
-      if(r.ok) return r;
-    } catch {}
-  }
-  throw new Error('All proxies failed');
-}
+// proxyFetch() defined above replaces fetchWithProxy
 
 async function fetchCensus(zip) {
   const vars=['B19013_001E','B25064_001E','B25077_001E','B01003_001E',
@@ -460,20 +461,20 @@ async function fetchCensus(zip) {
 }
 
 async function fetchFRED(seriesId,limit=6) {
-  const url=`https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${KEYS.fred}&file_type=json&sort_order=desc&limit=${limit}`;
-  const res=await fetchWithProxy(url);
+  const url='https://api.stlouisfed.org/fred/series/observations?series_id='+seriesId+'&api_key='+KEYS.fred+'&file_type=json&sort_order=desc&limit='+limit;
+  const res=await proxyFetch(url);
   const data=await res.json();
   return data.observations.filter(o=>o.value!=='.').map(o=>({date:o.date.slice(0,7),value:parseFloat(o.value)})).reverse();
 }
 
 async function fetchRentcast(zip) {
-  const url=`https://api.rentcast.io/v1/markets?zipCode=${zip}`;
-  // RentCast requires auth header — must use proxy
-  const res=await fetchWithProxy(url,{headers:{'X-Api-Key':KEYS.rentcast,accept:'application/json'}});
+  // Pass key as URL param AND header for max proxy compatibility
+  const url='https://api.rentcast.io/v1/markets?zipCode='+zip;
+  const res=await proxyFetch(url, {'X-Api-Key':KEYS.rentcast,'accept':'application/json'});
   const d=await res.json();
   return {
     averageRent:     d.averageRent||d.medianRent||0,
-    averageRentYoY:  d.averageRentYoY??d.rentGrowthRate??null,
+    averageRentYoY:  d.averageRentYoY!=null?d.averageRentYoY:(d.rentGrowthRate!=null?d.rentGrowthRate:null),
     daysOnMarket:    d.averageDaysOnMarket||d.medianDaysOnMarket||null,
     averageSalePrice:d.averageSalePrice||d.medianSalePrice||0,
   };
@@ -588,10 +589,12 @@ function rescoreAll(){
 // ════════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════════
+const STRAT_NAMES = ['Buy & Hold','BRRRR','Fix & Flip','Wholesale'];
 function setStrategy(btn){
   document.querySelectorAll('.strat-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  S.strategy=btn.dataset.s;
+  // Use index to avoid HTML entity encoding issues with dataset
+  S.strategy = STRAT_NAMES[parseInt(btn.dataset.si)] || 'Buy & Hold';
   rescoreAll();
   if(S.tab==='analyze') renderPage();
 }
@@ -984,7 +987,7 @@ async function fetchRedfin(id,file,label){
 
   try{
     const s3=RFBASE+file;
-    const proxy=`https://api.allorigins.win/raw?url=${encodeURIComponent(s3)}`;
+    const proxy='https://corsproxy.io/?url='+encodeURIComponent(s3);
     setMsg('Downloading...');
     const res=await fetch(proxy);
     if(!res.ok)throw new Error('Proxy '+res.status);
@@ -1134,7 +1137,7 @@ async function testOne(id){
       }catch{
         // Try proxy
         try{
-          const r=await fetch(PROXIES[0](`https://api.stlouisfed.org/fred/series?series_id=MORTGAGE30US&api_key=${KEYS.fred}&file_type=json`));
+          const r=await proxyFetch('https://api.stlouisfed.org/fred/series?series_id=MORTGAGE30US&api_key='+KEYS.fred+'&file_type=json');
           ok=r.ok; msg=r.ok?'Connected (via proxy)':'Error '+r.status;
         }catch(e){msg='Failed to fetch: '+e.message;}
       }
@@ -1147,7 +1150,7 @@ async function testOne(id){
         ok=r.ok; msg=r.ok?'Connected':'Error '+r.status;
       }catch{
         try{
-          const r=await fetch(PROXIES[0](`https://api.rentcast.io/v1/markets?zipCode=10001`));
+          const r=await proxyFetch('https://api.rentcast.io/v1/markets?zipCode=10001', {'X-Api-Key':KEYS.rentcast});
           ok=r.ok; msg=r.ok?'Connected (via proxy)':'Error '+r.status;
         }catch(e){msg='Failed: '+e.message;}
       }
