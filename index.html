@@ -856,14 +856,16 @@ async function runDiscover(){
     showToast('&#10003; Found ' + (data.zips?.length||0) + ' markets for ' + S.strategy);
   }catch(e){
     let msg = e.message;
-    if(msg.includes('Failed to fetch')||msg.includes('NetworkError')||msg.includes('Load failed')){
-      msg = 'Worker unreachable. Make sure: (1) propiq-worker.js is deployed to Cloudflare, (2) ANTHROPIC_KEY secret is set in Worker Settings > Variables & Secrets.';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
+      msg = 'Cannot reach Worker. Check: Cloudflare > propiq-worker > deployed with latest code.';
+    } else if (msg.includes('ANTHROPIC_KEY') || msg.includes('auth') || msg.includes('401')) {
+      msg = 'Missing API key. Go to Cloudflare > propiq-worker > Settings > Variables & Secrets > add ANTHROPIC_KEY.';
     }
-    err.innerHTML = '<strong>Error:</strong> ' + esc(msg);
+    err.innerHTML = '<strong>Discovery Error:</strong> ' + esc(msg);
     err.style.display = 'block';
     showToast('Discovery failed', true, 5000);
   }
-  btn.className='discover-btn'; btn.textContent='RESCAN MARKETS';
+  btn.className='discover-btn'; btn.textContent='\u21bb RESCAN MARKETS';
 }
 
 function showDiscoverResults(data,animate){
@@ -1189,23 +1191,52 @@ async function doPropertySearch() {
   trackCall('propertysearch');
   try {
     const r = await fetch(WORKER_URL+'/propertysearch?zip='+zip+'&limit=20');
-    if (!r.ok) throw new Error('Search '+r.status);
+    if (!r.ok) throw new Error('Worker returned ' + r.status);
     const d = await r.json();
     if (d.error) throw new Error(d.error);
+    // Normalise properties in case API shape changed
+    if (!d.properties || d.properties.length === 0) {
+      d.properties = normaliseProperties(d);
+    }
     S.searchResults = d;
-    if(status) status.textContent = '';
+    if (status) status.textContent = '';
     renderSearchResults(d);
-    showToast('\u2713 Found '+d.total+' listings in '+zip, false, 3000);
+    const count = d.properties?.length || 0;
+    showToast('\u2713 ' + (d.total || count) + ' listings loaded for ZIP ' + zip, false, 3000);
+    if (count === 0) {
+      if (status) status.textContent = 'No listings found for ZIP ' + zip + '. Try a nearby ZIP.';
+    }
   } catch(e) {
-    if(status) status.textContent = 'Error: '+e.message;
-    showToast('Search failed', true, 4000);
+    if (status) status.textContent = 'Error: ' + e.message;
+    showToast('Property search failed', true, 4000);
   }
+}
+
+function normaliseProperties(raw) {
+  // Handle many possible shapes from the housing API
+  const list = raw.props || raw.results || raw.listings || raw.data || raw.homes || raw.records || [];
+  return list.map(p => ({
+    address:      p.address || p.streetAddress || p.formattedAddress || p.full_address || '',
+    price:        p.price || p.listPrice || p.list_price || p.listingPrice || 0,
+    beds:         p.bedrooms || p.beds || p.bedroom_count || 0,
+    baths:        p.bathrooms || p.baths || p.bathroom_count || 0,
+    sqft:         p.livingArea || p.sqft || p.squareFeet || p.living_area || 0,
+    dom:          p.daysOnMarket || p.dom || p.days_on_market || null,
+    imgUrl:       p.imgSrc || p.primaryPhoto?.href || p.photos?.[0]?.href || p.photos?.[0] || p.photo || p.image || '',
+    zestimate:    p.zestimate || null,
+    rentZest:     p.rentZestimate || p.rent_zestimate || null,
+    url:          p.detailUrl || p.url || p.listing_url || '',
+    propType:     p.propertyType || p.homeType || p.property_type || p.type || '',
+    yearBuilt:    p.yearBuilt || p.year_built || null,
+    pricePerSqft: (p.price||p.listPrice) && (p.livingArea||p.sqft)
+                  ? Math.round((p.price||p.listPrice)/(p.livingArea||p.sqft)) : null,
+  })).filter(p => p.address || p.price);
 }
 
 function renderSearchResults(d) {
   const container = document.getElementById('search-results-container');
   if (!container || !d) return;
-  const props = d.properties || [];
+  const props = d.properties || normaliseProperties(d);
   if (!props.length) {
     container.innerHTML = '<div class="card" style="padding:40px;text-align:center"><p style="font-family:monospace;font-size:13px;color:#2a4060">No listings found for this ZIP</p></div>';
     return;
@@ -1985,59 +2016,44 @@ function emailReport(zip) {
 // PROPERTY AI ANALYSIS
 // ════════════════════════════════════════════
 async function analyzePropertyAI(prop) {
-  const key = prop.address;
+  const key = prop.address || '';
   if (S.propAIResults[key]) {
-    // Already fetched — show cached
-    showPropAIResult(prop.address, S.propAIResults[key]);
+    showPropAIResult(key, S.propAIResults[key]);
     return;
   }
-  const container = document.getElementById('ai-result-'+btoa(prop.address).slice(0,12));
-  if (container) {
-    container.innerHTML = '<div style="font-family:monospace;font-size:11px;color:#38bdf8;padding:10px">&#9211; Analyzing with AI...</div>';
-  }
+  const safeKey = btoa(key).slice(0,12);
+  const container = document.getElementById('ai-result-'+safeKey);
+  if (container) container.innerHTML = '<div style="font-family:monospace;font-size:11px;color:#38bdf8;padding:10px">&#9211; Analyzing with AI...</div>';
+
   trackCall('propertyai');
   try {
-    const prompt = `Analyze this investment property and provide a concise evaluation:
-
-Address: ${prop.address}
-List Price: $${(prop.price||0).toLocaleString()}
-Beds/Baths: ${prop.beds||'?'}bd / ${prop.baths||'?'}ba
-Sqft: ${prop.sqft?Number(prop.sqft).toLocaleString():'unknown'}
-Days on Market: ${prop.dom!=null?prop.dom:'unknown'}
-Est. Monthly Rent: ${prop.rentZest?'$'+Number(prop.rentZest).toLocaleString():' unknown'}
-Year Built: ${prop.yearBuilt||'unknown'}
-Property Type: ${prop.propType||'unknown'}
-Gross Yield: ${prop.price&&prop.rentZest?((prop.rentZest*12/prop.price)*100).toFixed(1)+'%':'unknown'}
-Market ZIP: ${S.searchZip||'unknown'} — Strategy: ${S.strategy}
-
-Provide:
-1. INVESTMENT SCORE (1-10) with one sentence reason
-2. BUY/HOLD/PASS recommendation with one sentence rationale  
-3. TOP 3 STRENGTHS as bullet points
-4. TOP 2 RISKS as bullet points
-5. COMPARABLE PROPERTIES — suggest what to compare this to (price/sqft, cap rate benchmarks for this market)
-
-Be direct and analytical. Format as JSON:
-{"score":7,"recommendation":"BUY","reason":"Strong yield with below-market price","strengths":["s1","s2","s3"],"risks":["r1","r2"],"comps":"comp analysis text"}`;
-
-    const r = await fetch(WORKER_URL+'/discover', {
-      method: 'GET',
+    const params = new URLSearchParams({
+      address:   prop.address  || '',
+      price:     prop.price    || 0,
+      beds:      prop.beds     || 0,
+      baths:     prop.baths    || 0,
+      sqft:      prop.sqft     || 0,
+      dom:       prop.dom      || 0,
+      rentZest:  prop.rentZest || 0,
+      yearBuilt: prop.yearBuilt|| 0,
+      zip:       S.searchZip   || '',
+      strategy:  S.strategy    || 'Buy & Hold',
     });
-    // Use a simple Claude call through the worker
-    const res = await fetch(WORKER_URL+'/propertyai?address='+encodeURIComponent(prop.address)+'&price='+(prop.price||0)+'&beds='+(prop.beds||0)+'&baths='+(prop.baths||0)+'&sqft='+(prop.sqft||0)+'&dom='+(prop.dom||0)+'&rentZest='+(prop.rentZest||0)+'&yearBuilt='+(prop.yearBuilt||0)+'&zip='+(S.searchZip||'')+'&strategy='+encodeURIComponent(S.strategy));
-    if (!res.ok) throw new Error('AI analysis '+res.status);
+    const res = await fetch(WORKER_URL + '/propertyai?' + params.toString());
+    if (!res.ok) throw new Error('AI analysis ' + res.status);
     const d = await res.json();
     if (d.error) throw new Error(d.error);
     S.propAIResults[key] = d;
-    showPropAIResult(prop.address, d);
+    showPropAIResult(key, d);
     showToast('\u2713 AI analysis complete');
   } catch(e) {
-    if (container) container.innerHTML = '<div style="font-family:monospace;font-size:10px;color:#f87171;padding:10px">Error: '+esc(e.message)+'</div>';
+    if (container) container.innerHTML = '<div style="font-family:monospace;font-size:10px;color:#f87171;padding:10px">Error: ' + esc(e.message) + '</div>';
+    showToast('AI analysis failed', true);
   }
 }
 
 function showPropAIResult(address, d) {
-  const key = btoa(address).slice(0,12);
+  const key = btoa(address || '').slice(0,12);
   const container = document.getElementById('ai-result-'+key);
   if (!container) return;
   const scoreColor = d.score>=7?'#22d3a0':d.score>=5?'#fbbf24':'#f87171';
