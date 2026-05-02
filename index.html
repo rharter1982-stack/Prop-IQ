@@ -269,6 +269,11 @@ table{border-collapse:collapse}
 @keyframes progressSlide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
 .fade-in{animation:fadeIn .3s ease forwards}
 
+/* ── FONT UTILITIES — used in JS-generated HTML to avoid quote conflicts ── */
+.fm{font-family:'DM Mono',monospace}
+.fd{font-family:'Bebas Neue',sans-serif}
+.fs{font-family:'DM Sans',sans-serif}
+
 /* ── RESPONSIVE ── */
 @media(max-width:640px){
   .two-col{grid-template-columns:1fr}
@@ -297,22 +302,8 @@ table{border-collapse:collapse}
   </div>
 </div>
 
-<div id="nav-row2">
-  <span class="strat-label">STRATEGY</span>
-  <button class="strat-btn active" data-si="0" onclick="setStrategy(this)">Buy &amp; Hold</button>
-  <button class="strat-btn"        data-si="1" onclick="setStrategy(this)">BRRRR</button>
-  <button class="strat-btn"        data-si="2" onclick="setStrategy(this)">Fix &amp; Flip</button>
-  <button class="strat-btn"        data-si="3" onclick="setStrategy(this)">Wholesale</button>
-</div>
-
-<div id="nav-row3">
-  <button class="tab-btn active" data-tab="discover" onclick="setTab(this)">&#9889; DISCOVER</button>
-  <button class="tab-btn"        data-tab="analyze"  onclick="setTab(this)" id="tab-analyze">&#128202; ANALYZE</button>
-  <button class="tab-btn"        data-tab="search"   onclick="setTab(this)" id="tab-search">&#128269; PROPERTIES</button>
-  <button class="tab-btn"        data-tab="lookup"   onclick="setTab(this)">&#127968; LOOKUP</button>
-  <button class="tab-btn"        data-tab="data"     onclick="setTab(this)" id="tab-data">&#128193; DATA</button>
-  <button class="tab-btn"        data-tab="api"      onclick="setTab(this)">&#9881; API &amp; HEALTH</button>
-</div>
+<div id="nav-row2"></div>
+<div id="nav-row3"></div>
 
 <!-- ══════════════════════════════════════════
      PAGE CONTENT
@@ -751,30 +742,38 @@ function rescoreAll(){
 // ════════════════════════════════════════════
 const STRAT_NAMES = ['Buy & Hold','BRRRR','Fix & Flip','Wholesale'];
 function renderNav() {
-  // Update tab bar based on auth state
-  const tabBar = document.getElementById('nav-row3');
-  if (!tabBar) return;
+  const stratBar = document.getElementById('nav-row2');
+  const tabBar   = document.getElementById('nav-row3');
+
   if (!isLoggedIn()) {
-    tabBar.innerHTML = '<button class="tab-btn active" data-tab="login" onclick="setTab(this)">&#128274; LOGIN</button>';
+    // Hide strategy bar, show login-only tab bar
+    if (stratBar) stratBar.innerHTML = '';
+    if (tabBar)   tabBar.innerHTML   = '';
     return;
   }
-  const adminTab = isAdmin() ? '<button class="tab-btn" data-tab="admin" onclick="setTab(this)">&#128737; ADMIN</button>' : '';
-  tabBar.innerHTML = `
-    <button class="tab-btn" data-tab="discover" onclick="setTab(this)">&#9889; DISCOVER</button>
-    <button class="tab-btn" data-tab="analyze"  onclick="setTab(this)" id="tab-analyze">&#128202; ANALYZE</button>
-    <button class="tab-btn" data-tab="search"   onclick="setTab(this)" id="tab-search">&#128269; PROPERTIES</button>
-    <button class="tab-btn" data-tab="lookup"   onclick="setTab(this)">&#127968; LOOKUP</button>
-    <button class="tab-btn" data-tab="data"     onclick="setTab(this)" id="tab-data">&#128193; DATA</button>
-    <button class="tab-btn" data-tab="api"      onclick="setTab(this)">&#9881; API &amp; HEALTH</button>
-    ${adminTab}
-    <button onclick="doLogout()" style="background:none;border:none;color:#2a4060;font-family:'DM Mono',monospace;font-size:11px;padding:12px 16px;cursor:pointer;letter-spacing:.06em">
-      &#128682; ${esc(S.session.displayName)}
-    </button>
-  `;
-  // Re-apply active class
-  tabBar.querySelectorAll('.tab-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === S.tab);
-  });
+
+  // Strategy bar
+  if (stratBar) {
+    stratBar.innerHTML = '<span class="strat-label">STRATEGY</span>'
+      + STRAT_NAMES.map((s,i) => '<button class="strat-btn' + (s===S.strategy?' active':'') + '" data-si="' + i + '" onclick="setStrategy(this)">' + s.replace('&','&amp;') + '</button>').join('');
+  }
+
+  // Tab bar
+  if (tabBar) {
+    const adminTab = isAdmin()
+      ? '<button class="tab-btn' + (S.tab==='admin'?' active':'') + '" data-tab="admin" onclick="setTab(this)">&#128737; ADMIN</button>'
+      : '';
+    tabBar.innerHTML =
+      '<button class="tab-btn'   + (S.tab==='discover'  ?' active':'') + '" data-tab="discover"  onclick="setTab(this)">&#9889; DISCOVER</button>'
+    + '<button class="tab-btn'   + (S.tab==='analyze'   ?' active':'') + '" data-tab="analyze"   onclick="setTab(this)" id="tab-analyze">&#128202; ANALYZE</button>'
+    + '<button class="tab-btn'   + (S.tab==='search'    ?' active':'') + '" data-tab="search"    onclick="setTab(this)" id="tab-search">&#128269; PROPERTIES</button>'
+    + '<button class="tab-btn'   + (S.tab==='lookup'    ?' active':'') + '" data-tab="lookup"    onclick="setTab(this)">&#127968; LOOKUP</button>'
+    + '<button class="tab-btn'   + (S.tab==='data'      ?' active':'') + '" data-tab="data"      onclick="setTab(this)" id="tab-data">&#128193; DATA</button>'
+    + '<button class="tab-btn'   + (S.tab==='api'       ?' active':'') + '" data-tab="api"       onclick="setTab(this)">&#9881; API &amp; HEALTH</button>'
+    + adminTab
+    + '<button onclick="doLogout()" style="background:none;border:none;color:#2a4060;font-size:11px;padding:12px 16px;cursor:pointer;white-space:nowrap">'
+    + '&#128682; ' + esc(S.session.displayName) + '</button>';
+  }
 }
 
 function setStrategy(btn){
@@ -787,25 +786,17 @@ function setStrategy(btn){
 }
 
 function setTab(btn){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  S.tab=btn.dataset.tab;
+  S.tab = btn.dataset.tab;
+  renderNav();
   renderPage();
 }
 
 function setTabById(id){
-  document.querySelectorAll('.tab-btn').forEach(b=>{
-    b.classList.toggle('active',b.dataset.tab===id);
-  });
-  S.tab=id;
+  S.tab = id;
+  renderNav();
 }
 
-function updateTabLabels(){
-  const ta=document.getElementById('tab-analyze');
-  if(ta) ta.innerHTML=`&#128202; ANALYZE${S.zips.length?' ('+S.zips.length+')':''}`;
-  const td=document.getElementById('tab-data');
-  if(td) td.innerHTML=`&#128193; DATA${S.redfinData?' &#10003;':''}`;
-}
+function updateTabLabels(){ renderNav(); }
 
 // ════════════════════════════════════════════
 // RENDER
@@ -898,7 +889,7 @@ function showDiscoverResults(data,animate){
         <div class="zip-card ${animate?'fade-in':''}" style="background:${rbg(i)};border:1px solid ${rbd(i)};animation-delay:${i*40}ms">
           <div class="zip-card-bar" style="background:${rbar(i)}"></div>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-            <span style="font-size:18px">${medals[i]||`<span style="font-family:'DM Mono',monospace;font-size:11px;color:#2a5080;font-weight:700">#${i+1}</span>`}</span>
+            <span style="font-size:18px">${medals[i]||`<span class="fm" style="font-size:11px;color:#2a5080;font-weight:700">#${i+1}</span>`}</span>
             <span class="zip-card-zip">${esc(z.zip)}</span>
             <span class="zip-card-city">${esc(z.city||'')}</span>
           </div>
@@ -928,7 +919,7 @@ function renderAnalyze(){
   if(S.zips.length===0)return`
     <div class="empty-state">
       <div style="font-size:40px;opacity:.08;margin-bottom:14px">&#128202;</div>
-      <p style="font-family:'DM Mono',monospace;font-size:13px;color:#1a3050">No markets loaded — use AI Discover or enter a ZIP above</p>
+      <p class="fm" style="font-size:13px;color:#1a3050">No markets loaded — use AI Discover or enter a ZIP above</p>
     </div>`;
 
   const ranked=[...S.zips].filter(z=>S.results[z]?.scoring)
@@ -949,10 +940,10 @@ function renderAnalyze(){
       </div>`;
   }).join('');
 
-  let detail='<div class="card" style="padding:40px;text-align:center"><p style="font-family:\'DM Mono\',monospace;font-size:12px;color:#2a4060">Select a ZIP from the list</p></div>';
+    let detail='<div class="card" style="padding:40px;text-align:center"><p style="font-family:monospace;font-size:12px;color:#2a4060">Select a ZIP from the list</p></div>';
 
   if(S.loading[S.active]){
-    detail='<div class="card" style="padding:40px;text-align:center"><p style="font-family:\'DM Mono\',monospace;font-size:12px;color:#38bdf8">Loading live data...</p></div>';
+    detail='<div class="card" style="padding:40px;text-align:center"><p style="font-family:monospace;font-size:12px;color:#38bdf8">Loading live data...</p></div>';
   } else if(active){
     detail=renderDetail(active,ranked);
   }
@@ -1014,11 +1005,11 @@ function renderDetail(d,ranked){
             ${vals.map((v,i)=>{const x=(i/(vals.length-1))*W,y=H-((v-mn)/rng)*(H-8)-4;return`<circle cx="${x}" cy="${y}" r="${i===vals.length-1?4:2}" fill="${i===vals.length-1?c2:'#1e2a3a'}" stroke="${c2}" stroke-width="1.5"/>`;}).join('')}
           </svg>
           <div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${c2}">${up?'+':''}${chg}%</div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4a6080">since ${fredHPI[0]?.date}</div>
+            <div class="fd" style="font-size:22px;color:${c2}">${up?'+':''}${chg}%</div>
+            <div class="fm" style="font-size:9px;color:#4a6080">since ${fredHPI[0]?.date}</div>
           </div>
           <div style="display:flex;gap:16px;flex-wrap:wrap">
-            ${fredHPI.map(d=>`<div style="text-align:center"><div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;margin-bottom:3px">${d.date}</div><div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#94a3b8">${d.value}</div></div>`).join('')}
+            ${fredHPI.map(d=>`<div style="text-align:center"><div class="fm" style="font-size:9px;color:#2a4060;margin-bottom:3px">${d.date}</div><div class="fm" style="font-size:12px;font-weight:700;color:#94a3b8">${d.value}</div></div>`).join('')}
           </div>
         </div>
       </div>`;
@@ -1057,11 +1048,11 @@ function renderDetail(d,ranked){
     <!-- Export actions -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
       <button onclick="exportReport('${S.active}')"
-        style="font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.08em;padding:7px 18px;border-radius:7px;border:1px solid #1a4a35;background:#071a10;color:#22d3a0;cursor:pointer">
+        class="fd" style="font-size:11px;letter-spacing:.08em;padding:7px 18px;border-radius:7px;border:1px solid #1a4a35;background:#071a10;color:#22d3a0;cursor:pointer">
         &#8659; DOWNLOAD REPORT
       </button>
       <button onclick="emailReport('${S.active}')"
-        style="font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.08em;padding:7px 18px;border-radius:7px;border:1px solid #1e3a5f;background:#0a1f38;color:#38bdf8;cursor:pointer">
+        class="fd" style="font-size:11px;letter-spacing:.08em;padding:7px 18px;border-radius:7px;border:1px solid #1e3a5f;background:#0a1f38;color:#38bdf8;cursor:pointer">
         &#9993; EMAIL REPORT
       </button>
     </div>
@@ -1133,8 +1124,8 @@ function renderDetail(d,ranked){
             <div class="sbar-wt">${(w*100).toFixed(0)}%</div>
           </div>`;}).join('')}
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;margin-top:2px">
-          <span style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;letter-spacing:.1em">COMPOSITE</span>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:${color}">${scoring.composite.toFixed(2)}<span style="font-size:16px;color:#2a4060">/10</span></span>
+          <span class="fm" style="font-size:10px;color:#2a4060;letter-spacing:.1em">COMPOSITE</span>
+          <span class="fd" style="font-size:36px;color:${color}">${scoring.composite.toFixed(2)}<span style="font-size:16px;color:#2a4060">/10</span></span>
         </div>
       </div>
       <div class="card">
@@ -1144,8 +1135,8 @@ function renderDetail(d,ranked){
              ['- CapEx 1%',-rep,'#f87171'],['= NOI',noi,'#7dd3fc'],['- P&I',-pi,'#f87171'],['- Tax+Ins',-(tax+ins),'#f87171']
             ].map(([l,v,c])=>`<div class="cf-row"><span class="cf-label">${l}</span><span class="cf-value" style="color:${c}">${v>=0?'$':'-$'}${Math.abs(Math.round(v)).toLocaleString()}</span></div>`).join('')}
           <div style="display:flex;justify-content:space-between;padding-top:10px">
-            <span style="font-family:'DM Mono',monospace;font-size:13px;color:#e2e8f0">= Monthly CF</span>
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${cf>=0?'#22d3a0':'#f87171'}">${cf>=0?'$':'-$'}${Math.abs(Math.round(cf)).toLocaleString()}</span>
+            <span class="fm" style="font-size:13px;color:#e2e8f0">= Monthly CF</span>
+            <span class="fd" style="font-size:24px;color:${cf>=0?'#22d3a0':'#f87171'}">${cf>=0?'$':'-$'}${Math.abs(Math.round(cf)).toLocaleString()}</span>
           </div>
           <div class="cf-metrics">
             ${[['CAP',cap.toFixed(2)+'%',cap>=6?'#22d3a0':'#fbbf24'],
@@ -1153,7 +1144,7 @@ function renderDetail(d,ranked){
                ['ANN',(cf>=0?'$':'-$')+Math.abs(Math.round(cf*12)).toLocaleString(),cf>=0?'#22d3a0':'#f87171'],
                ['P/R',(hv/(rent*12)).toFixed(0)+'x','#7dd3fc'],
               ].map(([l,v,c])=>`<div><div class="cf-metric-label">${l}</div><div class="cf-metric-value" style="color:${c}">${v}</div></div>`).join('')}
-          </div>`:'<p style="font-family:\'DM Mono\',monospace;font-size:12px;color:#2a4060">Insufficient data</p>'}
+        </div>`:'<p class="fm" style="font-size:12px;color:#2a4060">Insufficient data</p>'}
       </div>
     </div>
 
@@ -1176,13 +1167,13 @@ function renderSearch() {
             value="${esc(z)}"
             oninput="this.value=this.value.replace(/\D/g,'')"
             onkeydown="if(event.key==='Enter')doPropertySearch()"
-            style="flex:1;min-width:160px;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:14px;padding:10px 14px;border-radius:8px;font-family:'DM Mono',monospace;outline:none"/>
+            style="flex:1;min-width:160px;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:14px;padding:10px 14px;border-radius:8px;outline:none"/>
           <button onclick="doPropertySearch()"
-            style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.1em;padding:10px 28px;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;white-space:nowrap">
+            class="fd" style="font-size:14px;letter-spacing:.1em;padding:10px 28px;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;white-space:nowrap">
             &#128269; SEARCH LISTINGS
           </button>
         </div>
-        <div id="search-status" style="margin-top:10px;font-family:'DM Mono',monospace;font-size:11px;color:#2a4060"></div>
+        <div id="search-status" style="margin-top:10px;font-size:11px;color:#2a4060"></div>
       </div>
       <!-- Results injected here -->
       <div id="search-results-container"></div>
@@ -1216,7 +1207,7 @@ function renderSearchResults(d) {
   if (!container || !d) return;
   const props = d.properties || [];
   if (!props.length) {
-    container.innerHTML = '<div class="card" style="padding:40px;text-align:center"><p style="font-family:'DM Mono',monospace;font-size:13px;color:#2a4060">No listings found for this ZIP</p></div>';
+    container.innerHTML = '<div class="card" style="padding:40px;text-align:center"><p style="font-family:monospace;font-size:13px;color:#2a4060">No listings found for this ZIP</p></div>';
     return;
   }
 
@@ -1230,7 +1221,7 @@ function renderSearchResults(d) {
         ].map(([l,v,g])=>`<div class="tile${g?' green':''}"><div class="tile-label">${l}</div><div class="tile-value" style="font-size:18px">${v}</div></div>`).join('')}
       <div style="margin-left:auto;display:flex;gap:8px;padding-bottom:2px">
         <button onclick="exportPropertyList()"
-          style="font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.08em;padding:8px 16px;border-radius:7px;border:none;background:#071a10;border:1px solid #1a4a35;color:#22d3a0;cursor:pointer;white-space:nowrap">
+          class="fd" style="font-size:11px;letter-spacing:.08em;padding:8px 16px;border-radius:7px;border:none;background:#071a10;border:1px solid #1a4a35;color:#22d3a0;cursor:pointer;white-space:nowrap">
           &#8659; EXPORT LIST
         </button>
       </div>
@@ -1253,15 +1244,15 @@ function renderSearchResults(d) {
             ? `<img src="${esc(img)}" alt="property" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextSibling.style.display='flex'"/>
                <div style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:32px;color:#1a2a40">&#127968;</div>`
             : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#1a2a40">&#127968;</div>`}
-          ${prop.dom!=null?`<div style="position:absolute;top:8px;right:8px;background:rgba(2,8,18,.85);border:1px solid #1e3a5f;border-radius:6px;padding:3px 8px;font-family:'DM Mono',monospace;font-size:10px;color:#7dd3fc">${prop.dom}d on market</div>`:''}
-          ${prop.propType?`<div style="position:absolute;top:8px;left:8px;background:rgba(2,8,18,.85);border:1px solid #1e293b;border-radius:6px;padding:3px 8px;font-family:'DM Mono',monospace;font-size:10px;color:#94a3b8">${esc(prop.propType)}</div>`:''}
+          ${prop.dom!=null?`<div style="position:absolute;top:8px;right:8px;background:rgba(2,8,18,.85);border:1px solid #1e3a5f;border-radius:6px;padding:3px 8px;font-size:10px;color:#7dd3fc">${prop.dom}d on market</div>`:''}
+          ${prop.propType?`<div style="position:absolute;top:8px;left:8px;background:rgba(2,8,18,.85);border:1px solid #1e293b;border-radius:6px;padding:3px 8px;font-size:10px;color:#94a3b8">${esc(prop.propType)}</div>`:''}
         </div>
         <!-- Details -->
         <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:6px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#e2e8f0;line-height:1">${priceStr}</div>
-          ${ppsf?`<div style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060">${ppsf}</div>`:''}
+          <div class="fd" style="font-size:22px;color:#e2e8f0;line-height:1">${priceStr}</div>
+          ${ppsf?`<div class="fm" style="font-size:10px;color:#2a4060">${ppsf}</div>`:''}
           <div style="font-size:12px;color:#5a8090;line-height:1.5">${esc(prop.address||'Address unavailable')}</div>
-          <div style="display:flex;gap:12px;font-family:'DM Mono',monospace;font-size:11px;color:#4a6080;margin-top:2px">
+          <div style="display:flex;gap:12px;font-size:11px;color:#4a6080;margin-top:2px">
             ${prop.beds?`<span>&#127968; ${prop.beds}bd</span>`:''}
             ${prop.baths?`<span>&#128703; ${prop.baths}ba</span>`:''}
             ${prop.sqft?`<span>&#9618; ${Number(prop.sqft).toLocaleString()}sf</span>`:''}
@@ -1269,22 +1260,22 @@ function renderSearchResults(d) {
           </div>
           ${rentEst||grossYield?`
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-              ${rentEst?`<span style="font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;background:#071a10;border:1px solid #1a4a35;color:#22d3a0">${rentEst}</span>`:''}
-              ${grossYield?`<span style="font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;border-radius:4px;background:#071a10;border:1px solid #1a4a35;color:#22d3a0">${grossYield}</span>`:''}
+              ${rentEst?`<span class="fm" style="font-size:10px;padding:2px 8px;border-radius:4px;background:#071a10;border:1px solid #1a4a35;color:#22d3a0">${rentEst}</span>`:''}
+              ${grossYield?`<span class="fm" style="font-size:10px;padding:2px 8px;border-radius:4px;background:#071a10;border:1px solid #1a4a35;color:#22d3a0">${grossYield}</span>`:''}
             </div>`:''}
           <div style="margin-top:auto;padding-top:10px;display:flex;flex-direction:column;gap:6px">
             <div style="display:flex;gap:6px">
               <button onclick="prefillLookup('${esc(prop.address||'')}')"
-                style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.08em;padding:7px 0;border-radius:6px;border:1px solid #1e3a5f;background:#0a1f35;color:#38bdf8;cursor:pointer">
+                style="flex:1;font-size:11px;letter-spacing:.08em;padding:7px 0;border-radius:6px;border:1px solid #1e3a5f;background:#0a1f35;color:#38bdf8;cursor:pointer">
                 &#9741; MLS LOOKUP
               </button>
               ${detailUrl!=='#'?`<a href="${esc(detailUrl)}" target="_blank"
-                style="flex:1;font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.08em;padding:7px 0;border-radius:6px;background:#060f1e;border:1px solid #132030;color:#4a6080;cursor:pointer;text-decoration:none;text-align:center">
+                style="flex:1;font-size:11px;letter-spacing:.08em;padding:7px 0;border-radius:6px;background:#060f1e;border:1px solid #132030;color:#4a6080;cursor:pointer;text-decoration:none;text-align:center">
                 &#8599; LISTING
               </a>`:''}
             </div>
             <button onclick="analyzePropertyAI(${JSON.stringify({address:prop.address,price:prop.price,beds:prop.beds,baths:prop.baths,sqft:prop.sqft,dom:prop.dom,rentZest:prop.rentZest,yearBuilt:prop.yearBuilt,propType:prop.propType,url:prop.url}).replace(/'/g,'&#39;')})"
-              style="width:100%;font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.08em;padding:7px 0;border-radius:6px;border:none;background:linear-gradient(135deg,#4a0080,#0ea5e9);color:#fff;cursor:pointer">
+              style="width:100%;font-size:11px;letter-spacing:.08em;padding:7px 0;border-radius:6px;border:none;background:linear-gradient(135deg,#4a0080,#0ea5e9);color:#fff;cursor:pointer">
               &#9889; AI ANALYSIS
             </button>
             <div id="ai-result-${btoa(prop.address||'').slice(0,12)}"></div>
@@ -1321,13 +1312,13 @@ function renderLookup() {
             placeholder="e.g. 1340 Arbor Rd, Menlo Park, CA 94025"
             value="${esc(addr)}"
             onkeydown="if(event.key==='Enter')doPropertyLookup()"
-            style="flex:1;min-width:240px;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:10px 14px;border-radius:8px;font-family:'DM Mono',monospace;outline:none"/>
+            style="flex:1;min-width:240px;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:10px 14px;border-radius:8px;outline:none"/>
           <button onclick="doPropertyLookup()"
-            style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.1em;padding:10px 28px;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;white-space:nowrap">
+            class="fd" style="font-size:14px;letter-spacing:.1em;padding:10px 28px;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;white-space:nowrap">
             &#9741; ANALYZE PROPERTY
           </button>
         </div>
-        <div id="lookup-status" style="margin-top:10px;font-family:'DM Mono',monospace;font-size:11px;color:#2a4060"></div>
+        <div id="lookup-status" style="margin-top:10px;font-size:11px;color:#2a4060"></div>
       </div>
       <div id="lookup-result-container"></div>
     </div>`;
@@ -1374,9 +1365,9 @@ function renderLookupResult(d) {
     <div class="section-label" style="margin-bottom:10px">PRICE HISTORY</div>
     ${priceHistory.map(h=>`
       <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #0d1a28;font-size:12px">
-        <span style="font-family:'DM Mono',monospace;color:#3a6080">${esc(h.date||h.time||'')}</span>
-        <span style="font-family:'DM Mono',monospace;color:#e2e8f0">${h.price?'$'+Number(h.price).toLocaleString():''}</span>
-        <span style="font-family:'DM Mono',monospace;color:#4a6080">${esc(h.event||h.type||'')}</span>
+        <span class="fm" style="color:#3a6080">${esc(h.date||h.time||'')}</span>
+        <span class="fm" style="color:#e2e8f0">${h.price?'$'+Number(h.price).toLocaleString():''}</span>
+        <span class="fm" style="color:#4a6080">${esc(h.event||h.type||'')}</span>
       </div>`).join('')}` : '';
 
   const arvColor = d.arvEstimate ? '#22d3a0' : '#2a4060';
@@ -1387,16 +1378,16 @@ function renderLookupResult(d) {
       <!-- Header -->
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px">
         <div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:#e2e8f0;line-height:1">${d.price?'$'+Number(d.price).toLocaleString():'Price N/A'}</div>
+          <div class="fd" style="font-size:36px;color:#e2e8f0;line-height:1">${d.price?'$'+Number(d.price).toLocaleString():'Price N/A'}</div>
           <div style="font-size:13px;color:#3a6080;margin-top:4px">${esc(d.address||'')}</div>
           <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            ${d.status?`<span style="font-family:'DM Mono',monospace;font-size:10px;padding:3px 9px;border-radius:5px;background:#071a10;border:1px solid #1a4a35;color:#22d3a0">${esc(d.status)}</span>`:''}
-            ${d.dom!=null?`<span style="font-family:'DM Mono',monospace;font-size:10px;padding:3px 9px;border-radius:5px;background:#0a1525;border:1px solid #132030;color:#4a6080">${d.dom} days on market</span>`:''}
+            ${d.status?`<span class="fm" style="font-size:10px;padding:3px 9px;border-radius:5px;background:#071a10;border:1px solid #1a4a35;color:#22d3a0">${esc(d.status)}</span>`:''}
+            ${d.dom!=null?`<span class="fm" style="font-size:10px;padding:3px 9px;border-radius:5px;background:#0a1525;border:1px solid #132030;color:#4a6080">${d.dom} days on market</span>`:''}
           </div>
         </div>
         ${d.arvEstimate?`<div style="text-align:right">
-          <div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;letter-spacing:.15em;margin-bottom:4px">ARV ESTIMATE</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${arvColor}">$${Number(d.arvEstimate).toLocaleString()}</div>
+          <div class="fm" style="font-size:9px;color:#2a4060;letter-spacing:.15em;margin-bottom:4px">ARV ESTIMATE</div>
+          <div class="fd" style="font-size:28px;color:${arvColor}">$${Number(d.arvEstimate).toLocaleString()}</div>
         </div>`:''}
       </div>
       <!-- Stats grid -->
@@ -1414,8 +1405,8 @@ function renderLookupResult(d) {
       ${phHTML ? `<div style="margin-bottom:16px">${phHTML}</div>`:''}
       <!-- Raw MLS data toggle -->
       <details style="margin-top:8px">
-        <summary style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;cursor:pointer;letter-spacing:.12em">VIEW RAW MLS DATA</summary>
-        <pre style="margin-top:10px;font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;background:#060f1e;padding:12px;border-radius:8px;overflow-x:auto;max-height:300px">${esc(JSON.stringify(d.mlsData||{},null,2))}</pre>
+        <summary class="fm" style="font-size:10px;color:#2a4060;cursor:pointer;letter-spacing:.12em">VIEW RAW MLS DATA</summary>
+        <pre style="margin-top:10px;font-size:10px;color:#2a4060;background:#060f1e;padding:12px;border-radius:8px;overflow-x:auto;max-height:300px">${esc(JSON.stringify(d.mlsData||{},null,2))}</pre>
       </details>
     </div>`;
 }
@@ -1434,8 +1425,8 @@ function renderData(){
     <div style="background:#071a10;border:1px solid #1a4a30;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:4px">
       <span style="font-size:20px">&#9989;</span>
       <div>
-        <div style="font-family:'DM Mono',monospace;font-size:13px;color:#22d3a0;font-weight:700">${esc(S.redfinFile)}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:#2a6040;margin-top:2px">${S.redfinData.length} rows &middot; ${Object.keys(S.redfinData[0]||{}).length} columns</div>
+        <div class="fm" style="font-size:13px;color:#22d3a0;font-weight:700">${esc(S.redfinFile)}</div>
+        <div class="fm" style="font-size:11px;color:#2a6040;margin-top:2px">${S.redfinData.length} rows &middot; ${Object.keys(S.redfinData[0]||{}).length} columns</div>
       </div>
     </div>`:'' ;
 
@@ -1444,17 +1435,17 @@ function renderData(){
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;color:#7ab8e0;margin-bottom:4px">${ds.label}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;margin-bottom:8px">${ds.file}</div>
+          <div class="fm" style="font-size:10px;color:#2a4060;margin-bottom:8px">${ds.file}</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${ds.cols.map(c=>`<span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;background:#060f1e;border:1px solid #1a2a40;color:#38bdf8">${c}</span>`).join('')}
+            ${ds.cols.map(c=>`<span class="fm" style="font-size:9px;padding:2px 7px;border-radius:4px;background:#060f1e;border:1px solid #1a2a40;color:#38bdf8">${c}</span>`).join('')}
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
           <button id="fbtn-${ds.id}" onclick="fetchRedfin('${ds.id}','${ds.file}','${ds.label}')"
-            style="font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.1em;padding:7px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;white-space:nowrap">
+            class="fd" style="font-size:11px;letter-spacing:.1em;padding:7px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;white-space:nowrap">
             &#9889; FETCH LIVE
           </button>
-          <div id="fmsg-${ds.id}" style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;text-align:right;max-width:160px"></div>
+          <div id="fmsg-${ds.id}" class="fm" style="font-size:10px;color:#2a4060;text-align:right;max-width:160px"></div>
         </div>
       </div>
       <div id="fbar-${ds.id}" class="fetch-progress"><div class="fetch-progress-bar"></div></div>
@@ -1484,7 +1475,7 @@ function renderData(){
         <p style="font-size:12px;color:#2a4060;margin-bottom:12px">Download .gz, decompress, upload .tsv here.</p>
         <label class="upload-zone">
           <span style="font-size:20px">&#128194;</span>
-          <span style="font-family:'DM Mono',monospace;font-size:12px;color:#3a6080">Upload .tsv / .csv file</span>
+          <span class="fm" style="font-size:12px;color:#3a6080">Upload .tsv / .csv file</span>
           <input type="file" accept=".tsv,.csv,.txt" style="display:none" onchange="handleUpload(event)"/>
         </label>
       </div>
@@ -1621,8 +1612,8 @@ function renderAPI(){
     const barColor = warn ? '#f87171' : cfg.color;
     return `<div style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-family:'DM Mono',monospace;font-size:11px;color:#4a6080">${cfg.label}</span>
-        <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:${barColor}">
+        <span class="fm" style="font-size:11px;color:#4a6080">${cfg.label}</span>
+        <span class="fm" style="font-size:12px;font-weight:700;color:${barColor}">
           ${count}${cfg.limit ? ' / '+cfg.limit : ' calls'}
           ${cfg.limit ? (warn?'  ⚠ near limit':'') : '  (unlimited)'}
         </span>
@@ -1639,7 +1630,7 @@ function renderAPI(){
         <div class="section-label" style="margin-bottom:14px">API CALL COUNTER — THIS SESSION</div>
         ${counterHTML}
         <button onclick="if(confirm('Reset all call counts?')){S.calls={};saveCounts();renderPage();}"
-          style="margin-top:4px;background:#090f1e;border:1px solid #1a2a40;color:#2a4060;font-family:'DM Mono',monospace;font-size:10px;padding:5px 12px;border-radius:6px;cursor:pointer">
+          style="margin-top:4px;background:#090f1e;border:1px solid #1a2a40;color:#2a4060;font-size:10px;padding:5px 12px;border-radius:6px;cursor:pointer">
           RESET COUNTS
         </button>
       </div>
@@ -1647,7 +1638,7 @@ function renderAPI(){
         <div class="section-label">API HEALTH STATUS</div>
         <p style="font-size:12px;color:#3a6080;margin-bottom:14px">All 3 keys pre-loaded. Click to verify live connections.</p>
         <button onclick="testAll()"
-          style="width:100%;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.12em;padding:12px 0;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer">
+          style="width:100%;font-size:14px;letter-spacing:.12em;padding:12px 0;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer">
           &#9889; TEST ALL CONNECTIONS
         </button>
       </div>
@@ -1655,7 +1646,7 @@ function renderAPI(){
       <div class="card">
         <div class="section-label">API KEY CONFIGURATION</div>
         ${keyCards}
-        <p style="font-family:'DM Mono',monospace;font-size:10px;color:#1a3050;margin-top:10px;line-height:1.8">&#9888; Keys live in memory only — refresh clears them.</p>
+        <p class="fm" style="font-size:10px;color:#1a3050;margin-top:10px;line-height:1.8">&#9888; Keys live in memory only — refresh clears them.</p>
       </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
@@ -1706,32 +1697,32 @@ function renderLogin() {
     <div style="max-width:420px;margin:80px auto;display:flex;flex-direction:column;gap:20px">
       <div style="text-align:center;margin-bottom:8px">
         <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#22d3a0,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 12px">&#9900;</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.08em;color:#e2e8f0">PROPIQ</div>
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;letter-spacing:.2em;margin-top:2px">AI REAL ESTATE INTELLIGENCE</div>
+        <div class="fd" style="font-size:32px;letter-spacing:.08em;color:#e2e8f0">PROPIQ</div>
+        <div class="fm" style="font-size:10px;color:#2a4060;letter-spacing:.2em;margin-top:2px">AI REAL ESTATE INTELLIGENCE</div>
       </div>
       <div class="card" style="padding:28px 28px">
         <div class="section-label" style="margin-bottom:20px;text-align:center">SIGN IN TO CONTINUE</div>
         <div style="display:flex;flex-direction:column;gap:12px">
           <div>
-            <div style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;margin-bottom:5px">USERNAME</div>
+            <div class="fm" style="font-size:10px;color:#2a4060;margin-bottom:5px">USERNAME</div>
             <input id="login-user" type="text" placeholder="Enter username"
               onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()"
-              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:14px;padding:10px 14px;border-radius:8px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box"/>
+              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:14px;padding:10px 14px;border-radius:8px;outline:none;box-sizing:border-box"/>
           </div>
           <div>
-            <div style="font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;margin-bottom:5px">PASSWORD</div>
+            <div class="fm" style="font-size:10px;color:#2a4060;margin-bottom:5px">PASSWORD</div>
             <input id="login-pass" type="password" placeholder="Enter password"
               onkeydown="if(event.key==='Enter')doLogin()"
-              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:14px;padding:10px 14px;border-radius:8px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box"/>
+              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:14px;padding:10px 14px;border-radius:8px;outline:none;box-sizing:border-box"/>
           </div>
-          <div id="login-err" style="display:none;font-family:'DM Mono',monospace;font-size:11px;color:#f87171;text-align:center;padding:8px;background:#180808;border:1px solid #4a1515;border-radius:6px"></div>
+          <div id="login-err" style="display:none;font-size:11px;color:#f87171;text-align:center;padding:8px;background:#180808;border:1px solid #4a1515;border-radius:6px"></div>
           <button onclick="doLogin()"
-            style="width:100%;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.12em;padding:12px 0;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;margin-top:4px">
+            style="width:100%;font-size:15px;letter-spacing:.12em;padding:12px 0;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer;margin-top:4px">
             SIGN IN &#8594;
           </button>
         </div>
       </div>
-      <p style="text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:#1a3050">
+      <p style="text-align:center;font-size:10px;color:#1a3050">
         Contact your administrator to create an account
       </p>
     </div>`;
@@ -1743,19 +1734,19 @@ function renderLogin() {
 function renderAdmin() {
   const users = loadUsers();
   const userRows = users.length === 0
-    ? '<tr><td colspan="4" style="padding:16px;text-align:center;color:#2a4060;font-family:'DM Mono',monospace;font-size:11px">No users created yet</td></tr>'
+    ? '<tr><td colspan="4" style="padding:16px;text-align:center;color:#2a4060;font-size:11px">No users created yet</td></tr>'
     : users.map((u,i) => `
         <tr style="border-bottom:1px solid #0d1a28">
           <td style="padding:10px 12px;color:#e2e8f0">${esc(u.displayName||u.username)}</td>
-          <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-size:11px;color:#3a6080">${esc(u.username)}</td>
+          <td style="padding:10px 12px;font-size:11px;color:#3a6080">${esc(u.username)}</td>
           <td style="padding:10px 12px">
-            <span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:4px;background:${u.role==='admin'?'#0a1f38':'#071a10'};border:1px solid ${u.role==='admin'?'#1e3a5f':'#1a4a35'};color:${u.role==='admin'?'#38bdf8':'#22d3a0'}">
+            <span class="fm" style="font-size:9px;padding:2px 8px;border-radius:4px;background:${u.role==='admin'?'#0a1f38':'#071a10'};border:1px solid ${u.role==='admin'?'#1e3a5f':'#1a4a35'};color:${u.role==='admin'?'#38bdf8':'#22d3a0'}">
               ${u.role||'user'}
             </span>
           </td>
           <td style="padding:10px 12px">
             <button onclick="deleteUser(${i})"
-              style="background:#1a0808;border:1px solid #4a1515;color:#f87171;font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border-radius:5px;cursor:pointer">
+              style="background:#1a0808;border:1px solid #4a1515;color:#f87171;font-size:10px;padding:4px 10px;border-radius:5px;cursor:pointer">
               DELETE
             </button>
           </td>
@@ -1766,11 +1757,11 @@ function renderAdmin() {
       <!-- Header -->
       <div style="background:linear-gradient(135deg,#060f1e,#071520);border:1px solid #132030;border-radius:14px;padding:22px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
         <div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#e2e8f0;letter-spacing:.04em">&#128737; ADMIN PANEL</div>
-          <div style="font-family:'DM Mono',monospace;font-size:11px;color:#2a4060;margin-top:3px">Signed in as <span style="color:#22d3a0">${esc(S.session.displayName)}</span> &mdash; Administrator</div>
+          <div class="fd" style="font-size:28px;color:#e2e8f0;letter-spacing:.04em">&#128737; ADMIN PANEL</div>
+          <div class="fm" style="font-size:11px;color:#2a4060;margin-top:3px">Signed in as <span style="color:#22d3a0">${esc(S.session.displayName)}</span> &mdash; Administrator</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:#1a3050">${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+          <div class="fm" style="font-size:10px;color:#1a3050">${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
         </div>
       </div>
 
@@ -1782,8 +1773,8 @@ function renderAdmin() {
            ['API CALLS TODAY', Object.values(S.calls).reduce((a,b)=>a+b,0), '#a78bfa'],
           ].map(([l,v,c])=>`
           <div style="flex:1;min-width:120px;padding:16px;background:#090f1e;border:1px solid #121e30;border-radius:10px">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;letter-spacing:.1em;margin-bottom:5px">${l}</div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:${c}">${v}</div>
+            <div class="fm" style="font-size:9px;color:#2a4060;letter-spacing:.1em;margin-bottom:5px">${l}</div>
+            <div class="fd" style="font-size:26px;color:${c}">${v}</div>
           </div>`).join('')}
       </div>
 
@@ -1792,32 +1783,32 @@ function renderAdmin() {
         <div class="section-label" style="margin-bottom:16px">CREATE NEW USER</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;margin-bottom:5px">DISPLAY NAME</div>
+            <div class="fm" style="font-size:9px;color:#2a4060;margin-bottom:5px">DISPLAY NAME</div>
             <input id="new-display" type="text" placeholder="e.g. John Smith"
-              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:9px 12px;border-radius:7px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box"/>
+              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:9px 12px;border-radius:7px;outline:none;box-sizing:border-box"/>
           </div>
           <div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;margin-bottom:5px">USERNAME</div>
+            <div class="fm" style="font-size:9px;color:#2a4060;margin-bottom:5px">USERNAME</div>
             <input id="new-user" type="text" placeholder="login username"
-              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:9px 12px;border-radius:7px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box"/>
+              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:9px 12px;border-radius:7px;outline:none;box-sizing:border-box"/>
           </div>
           <div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;margin-bottom:5px">PASSWORD</div>
+            <div class="fm" style="font-size:9px;color:#2a4060;margin-bottom:5px">PASSWORD</div>
             <input id="new-pass" type="password" placeholder="set password"
-              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:9px 12px;border-radius:7px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box"/>
+              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:9px 12px;border-radius:7px;outline:none;box-sizing:border-box"/>
           </div>
           <div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;margin-bottom:5px">ROLE</div>
+            <div class="fm" style="font-size:9px;color:#2a4060;margin-bottom:5px">ROLE</div>
             <select id="new-role"
-              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:9px 12px;border-radius:7px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box">
+              style="width:100%;background:#0a1525;border:1px solid #1e3a50;color:#e2e8f0;font-size:13px;padding:9px 12px;border-radius:7px;outline:none;box-sizing:border-box">
               <option value="user">General User</option>
               <option value="admin">Administrator</option>
             </select>
           </div>
         </div>
-        <div id="create-err" style="display:none;font-family:'DM Mono',monospace;font-size:11px;color:#f87171;margin-bottom:10px"></div>
+        <div id="create-err" style="display:none;font-size:11px;color:#f87171;margin-bottom:10px"></div>
         <button onclick="createUser()"
-          style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.1em;padding:10px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer">
+          class="fd" style="font-size:13px;letter-spacing:.1em;padding:10px 24px;border-radius:8px;border:none;background:linear-gradient(135deg,#0ea5e9,#22d3a0);color:#000;font-weight:800;cursor:pointer">
           + CREATE USER
         </button>
       </div>
@@ -1831,16 +1822,16 @@ function renderAdmin() {
           <table style="width:100%;border-collapse:collapse;font-size:13px">
             <thead>
               <tr style="border-bottom:1px solid #132030">
-                <th style="text-align:left;padding:10px 12px;font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;font-weight:500">NAME</th>
-                <th style="text-align:left;padding:10px 12px;font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;font-weight:500">USERNAME</th>
-                <th style="text-align:left;padding:10px 12px;font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;font-weight:500">ROLE</th>
-                <th style="text-align:left;padding:10px 12px;font-family:'DM Mono',monospace;font-size:10px;color:#2a4060;font-weight:500">ACTIONS</th>
+                <th style="text-align:left;padding:10px 12px;font-size:10px;color:#2a4060;font-weight:500">NAME</th>
+                <th style="text-align:left;padding:10px 12px;font-size:10px;color:#2a4060;font-weight:500">USERNAME</th>
+                <th style="text-align:left;padding:10px 12px;font-size:10px;color:#2a4060;font-weight:500">ROLE</th>
+                <th style="text-align:left;padding:10px 12px;font-size:10px;color:#2a4060;font-weight:500">ACTIONS</th>
               </tr>
               <tr style="border-bottom:1px solid #0d1a28">
                 <td style="padding:10px 12px;color:#e2e8f0">Rharter (You)</td>
-                <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-size:11px;color:#3a6080">Rharter</td>
-                <td style="padding:10px 12px"><span style="font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:4px;background:#0a1f38;border:1px solid #1e3a5f;color:#38bdf8">admin</span></td>
-                <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-size:10px;color:#1a3050">Built-in</td>
+                <td style="padding:10px 12px;font-size:11px;color:#3a6080">Rharter</td>
+                <td style="padding:10px 12px"><span class="fm" style="font-size:9px;padding:2px 8px;border-radius:4px;background:#0a1f38;border:1px solid #1e3a5f;color:#38bdf8">admin</span></td>
+                <td style="padding:10px 12px;font-size:10px;color:#1a3050">Built-in</td>
               </tr>
             </thead>
             <tbody>${userRows}</tbody>
@@ -1854,12 +1845,12 @@ function renderAdmin() {
         <div style="display:flex;flex-direction:column;gap:8px">
           ${Object.entries(S.calls).filter(([,v])=>v>0).map(([k,v])=>`
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #0d1a28">
-              <span style="font-family:'DM Mono',monospace;font-size:12px;color:#4a6080">${k}</span>
-              <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#22d3a0">${v}</span>
-            </div>`).join('') || '<p style="font-family:'DM Mono',monospace;font-size:11px;color:#2a4060">No API calls this session</p>'}
+              <span class="fm" style="font-size:12px;color:#4a6080">${k}</span>
+              <span class="fd" style="font-size:18px;color:#22d3a0">${v}</span>
+            </div>`).join('') || '<p class="fm" style="font-size:11px;color:#2a4060">No API calls this session</p>'}
         </div>
         <button onclick="if(confirm('Reset all API call counts?')){S.calls={};saveCounts();renderPage();}"
-          style="margin-top:12px;background:#090f1e;border:1px solid #1a2a40;color:#2a4060;font-family:'DM Mono',monospace;font-size:10px;padding:6px 14px;border-radius:6px;cursor:pointer">
+          style="margin-top:12px;background:#090f1e;border:1px solid #1a2a40;color:#2a4060;font-size:10px;padding:6px 14px;border-radius:6px;cursor:pointer">
           RESET COUNTS
         </button>
       </div>
@@ -1949,20 +1940,28 @@ function exportReport(zip) {
 
 function exportPropertyList() {
   if (!S.searchResults?.properties?.length) { showToast('No properties to export', true); return; }
-  const {properties, zip, city} = S.searchResults;
-  const date = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  const rows = properties.map(p=>[p.address,p.price?'$'+Number(p.price).toLocaleString():'--',p.beds+'bd',p.baths+'ba',p.sqft?Number(p.sqft).toLocaleString()+'sqft':'--',p.dom!=null?p.dom+'d on mkt':'--',p.rentZest?'$'+Number(p.rentZest).toLocaleString()+'/mo est':'--'].join('	')).join('
-');
-  const tsv = 'Address	Price	Beds	Baths	SqFt	Days on Market	Est Rent
-'+rows;
-  const blob = new Blob([tsv], {type:'text/tab-separated-values'});
+  const {properties, zip} = S.searchResults;
+  const TAB = String.fromCharCode(9);
+  const NL  = String.fromCharCode(10);
+  const header = ['Address','Price','Beds','Baths','SqFt','Days on Market','Est Rent'].join(TAB);
+  const rows = properties.map(p=>[
+    p.address || '',
+    p.price ? '$'+Number(p.price).toLocaleString() : '--',
+    (p.beds||'?')+'bd',
+    (p.baths||'?')+'ba',
+    p.sqft ? Number(p.sqft).toLocaleString()+'sqft' : '--',
+    p.dom != null ? p.dom+'d on mkt' : '--',
+    p.rentZest ? '$'+Number(p.rentZest).toLocaleString()+'/mo est' : '--',
+  ].join(TAB)).join(NL);
+  const blob = new Blob([header + NL + rows], {type:'text/tab-separated-values'});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = 'PropIQ-Properties-'+zip+'-'+new Date().toISOString().slice(0,10)+'.tsv';
-  a.click(); URL.revokeObjectURL(url);
+  a.href = url;
+  a.download = 'PropIQ-Properties-'+zip+'-'+new Date().toISOString().slice(0,10)+'.tsv';
+  a.click();
+  URL.revokeObjectURL(url);
   showToast(properties.length+' properties exported');
 }
-
 function emailReport(zip) {
   const data = S.results[zip];
   if (!data) return;
@@ -1994,7 +1993,7 @@ async function analyzePropertyAI(prop) {
   }
   const container = document.getElementById('ai-result-'+btoa(prop.address).slice(0,12));
   if (container) {
-    container.innerHTML = '<div style="font-family:'DM Mono',monospace;font-size:11px;color:#38bdf8;padding:10px">&#9211; Analyzing with AI...</div>';
+    container.innerHTML = '<div style="font-family:monospace;font-size:11px;color:#38bdf8;padding:10px">&#9211; Analyzing with AI...</div>';
   }
   trackCall('propertyai');
   try {
@@ -2033,7 +2032,7 @@ Be direct and analytical. Format as JSON:
     showPropAIResult(prop.address, d);
     showToast('\u2713 AI analysis complete');
   } catch(e) {
-    if (container) container.innerHTML = '<div style="font-family:'DM Mono',monospace;font-size:10px;color:#f87171;padding:10px">Error: '+esc(e.message)+'</div>';
+    if (container) container.innerHTML = '<div style="font-family:monospace;font-size:10px;color:#f87171;padding:10px">Error: '+esc(e.message)+'</div>';
   }
 }
 
@@ -2046,21 +2045,21 @@ function showPropAIResult(address, d) {
   container.innerHTML = `
     <div style="margin-top:10px;padding:12px;background:#060f1e;border:1px solid #1e3a5f;border-radius:8px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${scoreColor}">AI SCORE: ${d.score}/10</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;padding:4px 12px;border-radius:6px;background:${recColor}22;border:1px solid ${recColor};color:${recColor}">${d.recommendation}</div>
+        <div class="fd" style="font-size:24px;color:${scoreColor}">AI SCORE: ${d.score}/10</div>
+        <div class="fd" style="font-size:16px;padding:4px 12px;border-radius:6px;background:${recColor}22;border:1px solid ${recColor};color:${recColor}">${d.recommendation}</div>
       </div>
       <p style="font-size:12px;color:#5a8090;margin-bottom:10px;line-height:1.6">${esc(d.reason||'')}</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div>
-          <div style="font-family:'DM Mono',monospace;font-size:9px;color:#22d3a0;margin-bottom:4px">STRENGTHS</div>
+          <div class="fm" style="font-size:9px;color:#22d3a0;margin-bottom:4px">STRENGTHS</div>
           ${(d.strengths||[]).map(s=>`<div style="font-size:11px;color:#4a6080;margin-bottom:3px">&#10003; ${esc(s)}</div>`).join('')}
         </div>
         <div>
-          <div style="font-family:'DM Mono',monospace;font-size:9px;color:#f87171;margin-bottom:4px">RISKS</div>
+          <div class="fm" style="font-size:9px;color:#f87171;margin-bottom:4px">RISKS</div>
           ${(d.risks||[]).map(r=>`<div style="font-size:11px;color:#4a6080;margin-bottom:3px">&#9888; ${esc(r)}</div>`).join('')}
         </div>
       </div>
-      ${d.comps?`<div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a4060;margin-bottom:4px">COMPS &amp; BENCHMARKS</div>
+      ${d.comps?`<div class="fm" style="font-size:9px;color:#2a4060;margin-bottom:4px">COMPS &amp; BENCHMARKS</div>
       <p style="font-size:11px;color:#3a6080;line-height:1.6">${esc(d.comps)}</p>`:''}
     </div>`;
 }
