@@ -369,20 +369,88 @@ function showToast(msg, isError=false, duration=3000) {
 }
 
 // ════════════════════════════════════════════
-// APP STATE
+// API CALL LIMITS — hard caps to prevent overages
 // ════════════════════════════════════════════
-// Load persisted call counts from localStorage
+const API_LIMITS = {
+  rentcast:      { limit: 50,   period: 'month', label: 'RentCast'         },
+  jobs:          { limit: 100,  period: 'month', label: 'Jobs (RapidAPI)'  },
+  walkscore:     { limit: 200,  period: 'month', label: 'Walk Score'       },
+  housing:       { limit: 50,   period: 'month', label: 'Housing Data'     },
+  placeslive:    { limit: 100,  period: 'month', label: 'Places to Live'   },
+  propertysearch:{ limit: 50,   period: 'month', label: 'Property Search'  },
+  propertylookup:{ limit: 30,   period: 'month', label: 'Property Lookup'  },
+  propertyai:    { limit: 50,   period: 'month', label: 'AI Analysis'      },
+  discover:      { limit: 20,   period: 'month', label: 'AI Discovery'     },
+  // Unlimited APIs — track only, no hard cap
+  fred:          { limit: null, period: 'month', label: 'FRED'             },
+  census:        { limit: null, period: 'month', label: 'Census'           },
+  popgrowth:     { limit: null, period: 'month', label: 'Pop Growth'       },
+};
+
+// Counts stored as { api: { count, month } } — resets automatically each month
 function loadCounts() {
-  try { return JSON.parse(localStorage.getItem('propiq_counts')||'{}'); } catch { return {}; }
+  try {
+    const raw = JSON.parse(localStorage.getItem('propiq_counts') || '{}');
+    const thisMonth = new Date().toISOString().slice(0, 7); // "2025-05"
+    // Reset any counts from a previous month
+    const cleaned = {};
+    Object.keys(raw).forEach(k => {
+      if (raw[k].month === thisMonth) cleaned[k] = raw[k];
+    });
+    return cleaned;
+  } catch { return {}; }
 }
+
 function saveCounts() {
   try { localStorage.setItem('propiq_counts', JSON.stringify(S.calls)); } catch {}
 }
+
+function getCount(api) {
+  const entry = S.calls[api];
+  if (!entry) return 0;
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  return entry.month === thisMonth ? (entry.count || 0) : 0;
+}
+
 function trackCall(api) {
-  if (!S.calls[api]) S.calls[api] = 0;
-  S.calls[api]++;
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  if (!S.calls[api] || S.calls[api].month !== thisMonth) {
+    S.calls[api] = { count: 0, month: thisMonth };
+  }
+  S.calls[api].count++;
   saveCounts();
 }
+
+// Returns true if the API is allowed, false if limit hit
+// Shows a toast warning at 80% and blocks at 100%
+function checkLimit(api) {
+  const cfg = API_LIMITS[api];
+  if (!cfg || !cfg.limit) return true; // unlimited
+
+  const used = getCount(api);
+  const limit = cfg.limit;
+
+  if (used >= limit) {
+    showToast(
+      cfg.label + ' limit reached (' + limit + '/' + limit + '/mo). Disabled to prevent charges.',
+      true, 6000
+    );
+    return false; // BLOCKED
+  }
+
+  if (used >= Math.floor(limit * 0.8)) {
+    showToast(
+      '⚠ ' + cfg.label + ': ' + used + '/' + limit + ' calls used this month.',
+      true, 4000
+    );
+  }
+
+  return true; // allowed
+}
+
+// ════════════════════════════════════════════
+// APP STATE
+// ════════════════════════════════════════════
 
 // ════════════════════════════════════════════
 // AUTH & USER MANAGEMENT
@@ -583,7 +651,7 @@ async function fetchFRED(seriesId, limit=6) {
 }
 
 async function fetchRentcast(zip) {
-  // Routed through Worker — auth header added server-side
+  if (!checkLimit('rentcast')) throw new Error('RentCast monthly limit reached');
   trackCall('rentcast');
   const res = await fetch(WORKER_URL+'/rentcast?zip='+zip);
   if (!res.ok) throw new Error('RentCast worker '+res.status);
@@ -598,6 +666,7 @@ async function fetchRentcast(zip) {
 }
 
 async function fetchJobs(zip) {
+  if (!checkLimit('jobs')) throw new Error('Jobs API monthly limit reached');
   trackCall('jobs');
   const res = await fetch(WORKER_URL+'/jobs?zip='+zip);
   if (!res.ok) throw new Error('Jobs worker '+res.status);
@@ -616,6 +685,7 @@ async function fetchPopGrowth(zip) {
 }
 
 async function fetchWalkScore(zip) {
+  if (!checkLimit('walkscore')) throw new Error('Walk Score monthly limit reached');
   trackCall('walkscore');
   const r = await fetch(WORKER_URL+'/walkscore?zip='+zip);
   if (!r.ok) throw new Error('WalkScore '+r.status);
@@ -625,6 +695,7 @@ async function fetchWalkScore(zip) {
 }
 
 async function fetchHousing(zip) {
+  if (!checkLimit('housing')) throw new Error('Housing API monthly limit reached');
   trackCall('housing');
   const r = await fetch(WORKER_URL+'/housing?zip='+zip);
   if (!r.ok) throw new Error('Housing '+r.status);
@@ -634,6 +705,7 @@ async function fetchHousing(zip) {
 }
 
 async function fetchPlacesLive(zip) {
+  if (!checkLimit('placeslive')) throw new Error('Places to Live monthly limit reached');
   trackCall('placeslive');
   const r = await fetch(WORKER_URL+'/placeslive?zip='+zip);
   if (!r.ok) throw new Error('PlacesLive '+r.status);
@@ -674,6 +746,7 @@ async function fetchLiveData(zip) {
 // ════════════════════════════════════════════
 async function runAIDiscovery(strategy, onToken) {
   // Called through Cloudflare Worker — no CORS issues from GitHub Pages
+  if (!checkLimit('discover')) throw new Error('AI Discovery limit reached for this month.');
   trackCall('discover');
   onToken('Searching live market data via AI...');
   const res = await fetch(
@@ -1188,6 +1261,10 @@ async function doPropertySearch() {
   const status = document.getElementById('search-status');
   if(status) status.textContent = 'Fetching listings...';
   S.searchZip = zip;
+  if (!checkLimit('propertysearch')) {
+    if(status) status.textContent = 'Property Search limit reached for this month.';
+    return;
+  }
   trackCall('propertysearch');
   try {
     const r = await fetch(WORKER_URL+'/propertysearch?zip='+zip+'&limit=20');
@@ -1361,6 +1438,10 @@ async function doPropertyLookup() {
   const status = document.getElementById('lookup-status');
   if(status) status.textContent = 'Looking up MLS data...';
   S.lookupAddress = address;
+  if (!checkLimit('propertylookup')) {
+    if(status) status.textContent = 'Property Lookup limit reached for this month.';
+    return;
+  }
   trackCall('propertylookup');
   try {
     const r = await fetch(WORKER_URL+'/propertylookup', {
@@ -1625,34 +1706,31 @@ function renderAPI(){
     </div>`).join('');
 
   // Build call counter display
-  const LIMITS = {
-    rentcast:  {label:'RentCast',        limit:50,   color:'#fbbf24'},
-    jobs:      {label:'Jobs (RapidAPI)', limit:null, color:'#f87171'},
-    walkscore: {label:'Walk Score',      limit:null, color:'#22d3a0'},
-    housing:   {label:'Housing Data',   limit:null, color:'#38bdf8'},
-    placeslive:{label:'Places to Live', limit:null, color:'#a78bfa'},
-    fred:      {label:'FRED',            limit:null, color:'#38bdf8'},
-    census:    {label:'Census',          limit:null, color:'#22d3a0'},
-    popgrowth: {label:'Pop Growth',      limit:null, color:'#7dd3fc'},
-    discover:  {label:'AI Discovery',    limit:null, color:'#a78bfa'},
-  };
+  // Use API_LIMITS constant for consistency
+  const LIMITS = {};
+  Object.keys(API_LIMITS).forEach(k => {
+    LIMITS[k] = {
+      label: API_LIMITS[k].label,
+      limit: API_LIMITS[k].limit,
+      color: API_LIMITS[k].limit ? '#fbbf24' : '#22d3a0',
+    };
+  });
   const counterHTML = Object.entries(LIMITS).map(([key,cfg]) => {
-    const count = S.calls[key] || 0;
-    const pct   = cfg.limit ? Math.min(100, (count/cfg.limit)*100) : 0;
-    const warn  = cfg.limit && count >= cfg.limit * 0.8;
-    const barColor = warn ? '#f87171' : cfg.color;
-    return `<div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span class="fm" style="font-size:11px;color:#4a6080">${cfg.label}</span>
-        <span class="fm" style="font-size:12px;font-weight:700;color:${barColor}">
-          ${count}${cfg.limit ? ' / '+cfg.limit : ' calls'}
-          ${cfg.limit ? (warn?'  ⚠ near limit':'') : '  (unlimited)'}
-        </span>
-      </div>
-      ${cfg.limit ? `<div style="height:4px;background:#0d1a28;border-radius:2px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width .6s ease"></div>
-      </div>` : ''}
-    </div>`;
+    const used  = getCount(key);
+    const pct   = cfg.limit ? Math.min(100, Math.round(used/cfg.limit*100)) : 0;
+    const hit   = cfg.limit && used >= cfg.limit;
+    const warn  = cfg.limit && used >= Math.floor(cfg.limit * 0.8);
+    const c     = hit ? '#f87171' : warn ? '#fbbf24' : cfg.color;
+    const badge = hit ? ' ⛔ DISABLED' : warn ? ' ⚠ ' + pct + '%' : cfg.limit ? '' : ' (unlimited)';
+    return '<div style="margin-bottom:12px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+      +'<span class="fm" style="font-size:11px;color:#4a6080">'+cfg.label+'</span>'
+      +'<span class="fm" style="font-size:12px;font-weight:700;color:'+c+'">'
+      +used+(cfg.limit?' / '+cfg.limit:' calls')+badge+'</span></div>'
+      +(cfg.limit ? '<div style="height:4px;background:#0d1a28;border-radius:2px;overflow:hidden">'
+        +'<div style="height:100%;width:'+pct+'%;background:'+c+';border-radius:2px;transition:width .6s ease"></div>'
+        +'</div>' : '')
+      +'</div>';
   }).join('');
 
   return`
@@ -1874,11 +1952,22 @@ function renderAdmin() {
       <div class="card">
         <div class="section-label" style="margin-bottom:16px">API USAGE — CURRENT SESSION</div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          ${Object.entries(S.calls).filter(([,v])=>v>0).map(([k,v])=>`
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #0d1a28">
-              <span class="fm" style="font-size:12px;color:#4a6080">${k}</span>
-              <span class="fd" style="font-size:18px;color:#22d3a0">${v}</span>
-            </div>`).join('') || '<p class="fm" style="font-size:11px;color:#2a4060">No API calls this session</p>'}
+          ${Object.keys(API_LIMITS).map(k => {
+            const used = getCount(k);
+            const cfg  = API_LIMITS[k];
+            if (used === 0) return '';
+            const hit  = cfg.limit && used >= cfg.limit;
+            const warn = cfg.limit && used >= cfg.limit * 0.8;
+            const c    = hit ? '#f87171' : warn ? '#fbbf24' : '#22d3a0';
+            const pct  = cfg.limit ? Math.round(used/cfg.limit*100) : 0;
+            const bar  = cfg.limit ? '<div style="height:3px;background:#0d1a28;border-radius:2px;overflow:hidden;margin-top:3px"><div style="height:100%;width:'+pct+'%;background:'+c+'"></div></div>' : '';
+            const badge = hit ? ' ⛔ DISABLED' : warn ? ' ⚠' : '';
+            return '<div style="padding:7px 0;border-bottom:1px solid #0d1a28">'
+              +'<div style="display:flex;justify-content:space-between">'
+              +'<span class="fm" style="font-size:12px;color:#4a6080">'+cfg.label+'</span>'
+              +'<span class="fd" style="font-size:17px;color:'+c+'">'+used+(cfg.limit?'/'+cfg.limit:'')+badge+'</span>'
+              +'</div>'+bar+'</div>';
+          }).filter(Boolean).join('') || '<p class="fm" style="font-size:11px;color:#2a4060">No API calls this month</p>'}
         </div>
         <button onclick="if(confirm('Reset all API call counts?')){S.calls={};saveCounts();renderPage();}"
           style="margin-top:12px;background:#090f1e;border:1px solid #1a2a40;color:#2a4060;font-size:10px;padding:6px 14px;border-radius:6px;cursor:pointer">
@@ -2025,6 +2114,10 @@ async function analyzePropertyAI(prop) {
   const container = document.getElementById('ai-result-'+safeKey);
   if (container) container.innerHTML = '<div style="font-family:monospace;font-size:11px;color:#38bdf8;padding:10px">&#9211; Analyzing with AI...</div>';
 
+  if (!checkLimit('propertyai')) {
+    if (container) container.innerHTML = '<div style="font-family:monospace;font-size:11px;color:#f87171;padding:10px">AI Analysis limit reached for this month.</div>';
+    return;
+  }
   trackCall('propertyai');
   try {
     const params = new URLSearchParams({
