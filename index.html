@@ -725,11 +725,23 @@ async function fetchPlacesLive(zip) {
 }
 
 async function fetchLiveData(zip) {
+  // If Worker is known offline, skip Worker-dependent calls immediately
+  const workerCalls = S.workerOnline === false
+    ? [Promise.reject(new Error('Worker offline')),  // rentcast
+       Promise.reject(new Error('Worker offline')),  // mort
+       Promise.reject(new Error('Worker offline')),  // hpi
+       Promise.reject(new Error('Worker offline')),  // jobs
+       Promise.reject(new Error('Worker offline')),  // pop
+       Promise.reject(new Error('Worker offline')),  // walk
+       Promise.reject(new Error('Worker offline')),  // housing
+       Promise.reject(new Error('Worker offline'))]  // places
+    : [fetchRentcast(zip),
+       fetchFRED('MORTGAGE30US',1), fetchFRED('CSUSHPISA',6),
+       fetchJobs(zip), fetchPopGrowth(zip),
+       fetchWalkScore(zip), fetchHousing(zip), fetchPlacesLive(zip)];
+
   const [cen,rc,mort,hpi,jobs,pop,walk,housing,places]=await Promise.allSettled([
-    fetchCensus(zip), fetchRentcast(zip),
-    fetchFRED('MORTGAGE30US',1), fetchFRED('CSUSHPISA',6),
-    fetchJobs(zip), fetchPopGrowth(zip),
-    fetchWalkScore(zip), fetchHousing(zip), fetchPlacesLive(zip),
+    fetchCensus(zip), ...workerCalls,
   ]);
   const mk=mockData(zip);
   return {
@@ -929,6 +941,15 @@ async function runDiscover(){
   const res=document.getElementById('discover-results');
   btn.className='discover-btn loading'; btn.textContent='\u23F3 ANALYZING... (~5 SECS)';
   err.style.display='none'; res.style.display='none'; box.style.display='none';
+  // Check Worker first
+  if (S.workerOnline === false) {
+    err.innerHTML = '<strong>Worker Offline:</strong> Cannot reach ' + WORKER_URL + '<br><br>'
+      + 'Fix: Go to Cloudflare &rarr; Workers &amp; Pages &rarr; propiq-worker &rarr; Edit Code &rarr; paste propiq-worker.js &rarr; Deploy';
+    err.style.display = 'block';
+    btn.className = 'discover-btn';
+    btn.textContent = '⚠ WORKER OFFLINE';
+    return;
+  }
   try{
     const data=await runAIDiscovery(S.strategy,full=>{
       box.style.display='block';
@@ -2204,6 +2225,22 @@ if (_savedSession) {
 }
 renderNav();
 renderPage();
+
+// Check Worker is reachable — runs in background, shows warning if not
+(async function checkWorker() {
+  try {
+    const r = await withTimeout(fetch(WORKER_URL + '/health'), 5000, 'Worker');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    S.workerVersion = d.version || 'unknown';
+    S.workerOnline  = true;
+    console.log('Worker online v' + S.workerVersion);
+  } catch(e) {
+    S.workerOnline = false;
+    console.warn('Worker offline:', e.message);
+    showToast('⚠ Worker unreachable. Live data disabled — using estimates. Check Cloudflare.', true, 8000);
+  }
+})();
 </script>
 </body>
 </html>
